@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ניהול אירועים</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0f1117;
+  --bg2: #161b26;
+  --bg3: #1e2433;
+  --bg4: #252c3d;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #f0f2f8;
+  --text2: #8b92a8;
+  --text3: #4a5168;
+  --accent: #4f7ef8;
+  --accent-dim: rgba(79,126,248,0.15);
+  --header-bg: #4f7ef8;
+  --orange: #f59e0b;
+  --orange-dim: rgba(245,158,11,0.15);
+  --yellow: #eab308;
+  --yellow-dim: rgba(234,179,8,0.15);
+  --green: #22c55e;
+  --green-dim: rgba(34,197,94,0.15);
+  --red: #ef4444;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+
+/* ── SETUP ── */
+#setup-screen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 999; padding: 20px; }
+.setup-card { background: var(--bg2); border: 1px solid var(--border2); border-radius: 20px; padding: 40px; max-width: 460px; width: 100%; box-shadow: var(--shadow-lg); }
+.setup-logo { width: 60px; height: 60px; background: var(--accent); border-radius: 16px; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+.setup-title { font-size: 24px; font-weight: 800; text-align: center; margin-bottom: 6px; }
+.setup-sub { font-size: 13px; color: var(--text2); text-align: center; margin-bottom: 32px; line-height: 1.7; }
+.setup-field { margin-bottom: 16px; }
+.setup-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; }
+.setup-field input { width: 100%; padding: 11px 14px; border: 1px solid var(--border2); border-radius: 10px; font-size: 13px; direction: ltr; background: var(--bg3); color: var(--text); font-family: monospace; }
+.setup-field input:focus { outline: none; border-color: var(--accent); }
+.setup-btn { width: 100%; background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 13px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Heebo', sans-serif; margin-top: 4px; transition: opacity .2s; }
+.setup-btn:hover { opacity: .88; }
+.setup-note { font-size: 12px; color: var(--text3); text-align: center; margin-top: 16px; line-height: 1.7; }
+.setup-link { color: var(--accent); text-decoration: none; }
+
+/* ── TOPBAR ── */
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 0 28px; height: 88px; background: var(--header-bg); border-bottom: 1px solid rgba(255,255,255,0.1); position: sticky; top: 0; z-index: 40; transition: background .4s; }
+.logo-area { display: flex; align-items: center; gap: 14px; }
+.logo-box { width: 64px; height: 64px; border-radius: 16px; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 900; color: #fff; overflow: hidden; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.25); }
+.logo-box img { width: 100%; height: 100%; object-fit: cover; border-radius: 14px; }
+.brand-name { font-size: 22px; font-weight: 900; color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,0.25); }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.view-tabs { display: flex; gap: 2px; background: rgba(255,255,255,0.12); border-radius: 10px; padding: 3px; }
+.view-tab { padding: 6px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; border: none; background: transparent; color: rgba(255,255,255,0.65); font-weight: 600; font-family: 'Heebo', sans-serif; transition: all .15s; }
+.view-tab.active { background: rgba(255,255,255,0.2); color: #fff; }
+.btn-add { background: rgba(255,255,255,0.2); color: #fff; border: 1.5px solid rgba(255,255,255,0.3); border-radius: 10px; padding: 8px 18px; font-size: 13px; cursor: pointer; font-weight: 700; font-family: 'Heebo', sans-serif; white-space: nowrap; transition: all .2s; }
+.btn-add:hover { background: rgba(255,255,255,0.3); }
+.sync-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.6); flex-shrink: 0; }
+.sync-dot.ok { background: #4ade80; }
+.sync-dot.loading { background: var(--yellow); animation: pulse 1s infinite; }
+.sync-dot.error { background: var(--red); }
+.sync-wrap { display: flex; align-items: center; gap: 6px; font-size: 12px; color: rgba(255,255,255,0.6); }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
+
+/* ── BRAND BAR ── */
+.brand-bar { display: none; }
+.profile-btn { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.25); border-radius: 10px; padding: 7px 14px; cursor: pointer; color: #fff; font-family: 'Heebo',sans-serif; font-size: 13px; font-weight: 600; transition: all .15s; }
+.profile-btn:hover { background: rgba(255,255,255,0.25); }
+.profile-icon { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+
+/* ── VENUE MODAL ── */
+.venue-tabs { display: flex; gap: 2px; background: var(--bg3); border-radius: 10px; padding: 3px; margin-bottom: 18px; }
+.venue-tab { flex: 1; padding: 8px; border-radius: 8px; font-size: 12px; cursor: pointer; border: none; background: transparent; color: var(--text2); font-weight: 600; font-family: 'Heebo',sans-serif; transition: all .15s; text-align: center; }
+.venue-tab.active { background: var(--bg4); color: var(--text); }
+.waze-btn { display: flex; align-items: center; gap: 8px; background: #00d4e0; color: #fff; border: none; border-radius: 9px; padding: 10px 18px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Heebo',sans-serif; margin-top: 8px; }
+.user-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; margin-bottom: 8px; }
+
+/* ── WEEK VIEW ── */
+.week-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.week-header { display: grid; grid-template-columns: 60px repeat(7,1fr); direction: rtl; border-bottom: 1px solid var(--border); }
+.week-day-head { padding: 10px 6px; text-align: center; font-size: 11px; font-weight: 700; color: var(--text3); border-left: 1px solid var(--border); }
+.week-day-head:first-child { border-left: none; }
+.week-day-head.today-col { color: var(--accent); }
+.week-body { display: grid; grid-template-columns: 60px repeat(7,1fr); direction: rtl; }
+.week-time-col { display: flex; flex-direction: column; }
+.week-time-slot { height: 52px; border-bottom: 1px solid var(--border); padding: 4px 8px; font-size: 10px; color: var(--text3); font-weight: 600; }
+.week-day-col { border-left: 1px solid var(--border); position: relative; min-height: 520px; }
+.week-event-block { position: absolute; right: 3px; left: 3px; border-radius: 6px; padding: 4px 6px; font-size: 11px; font-weight: 700; cursor: pointer; overflow: hidden; }
+
+/* ── PDF / WHATSAPP ── */
+.share-row { display: flex; gap: 8px; margin-top: 8px; }
+.btn-pdf { background: rgba(239,68,68,.15); color: #fca5a5; border: 1px solid rgba(239,68,68,.3); border-radius: 9px; padding: 8px 16px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'Heebo',sans-serif; }
+.btn-wa { background: rgba(37,211,102,.15); color: #4ade80; border: 1px solid rgba(37,211,102,.3); border-radius: 9px; padding: 8px 16px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'Heebo',sans-serif; }
+
+/* ── FILTERS ── */
+.filters { display: flex; gap: 8px; padding: 10px 28px; flex-wrap: wrap; align-items: center; background: var(--bg2); border-bottom: 1px solid var(--border); }
+.filter-group { display: flex; align-items: center; gap: 6px; }
+.filter-group label { font-size: 12px; color: var(--text3); font-weight: 600; }
+.filters select, .filters input[type=date] { font-size: 13px; padding: 5px 10px; border: 1px solid var(--border2); border-radius: 8px; background: var(--bg3); color: var(--text); height: 30px; direction: rtl; font-family: 'Heebo', sans-serif; }
+.filters select option { background: var(--bg3); }
+.btn-clear { background: transparent; border: 1px solid var(--border2); border-radius: 8px; padding: 4px 12px; font-size: 12px; cursor: pointer; color: var(--text2); font-family: 'Heebo', sans-serif; }
+.btn-clear:hover { border-color: var(--border2); color: var(--text); }
+
+/* ── CONTENT ── */
+.content { padding: 24px 28px; }
+
+/* ── STATS ── */
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+.stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; position: relative; overflow: hidden; transition: border-color .2s; }
+.stat-card:hover { border-color: var(--border2); }
+.stat-card::before { content: ''; position: absolute; top: 0; right: 0; left: 0; height: 3px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+.stat-card.c-blue::before { background: var(--accent); }
+.stat-card.c-orange::before { background: var(--orange); }
+.stat-card.c-yellow::before { background: var(--yellow); }
+.stat-card.c-green::before { background: var(--green); }
+.stat-glow { position: absolute; top: -20px; left: -20px; width: 80px; height: 80px; border-radius: 50%; opacity: .08; }
+.stat-card.c-blue .stat-glow { background: var(--accent); }
+.stat-card.c-orange .stat-glow { background: var(--orange); }
+.stat-card.c-yellow .stat-glow { background: var(--yellow); }
+.stat-card.c-green .stat-glow { background: var(--green); }
+.stat-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+.stat-card.c-blue .stat-label { color: var(--accent); }
+.stat-card.c-orange .stat-label { color: var(--orange); }
+.stat-card.c-yellow .stat-label { color: var(--yellow); }
+.stat-card.c-green .stat-label { color: var(--green); }
+.stat-value { font-size: 36px; font-weight: 900; color: var(--text); line-height: 1; }
+.stat-sub { font-size: 11px; color: var(--text3); margin-top: 4px; font-weight: 500; }
+
+/* ── CHART ── */
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+.chart-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; }
+.chart-title { font-size: 13px; font-weight: 700; color: var(--text2); margin-bottom: 16px; text-transform: uppercase; letter-spacing: .06em; }
+.chart-wrap { position: relative; height: 160px; }
+
+/* ── EVENT CARDS ── */
+.events-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.event-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); cursor: pointer; transition: all .2s; overflow: hidden; }
+.event-card:hover { border-color: var(--border2); transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.card-bar { height: 4px; }
+.card-body { padding: 16px; }
+.card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 8px; }
+.card-title { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.3; }
+.status-pill { font-size: 10px; padding: 3px 10px; border-radius: 20px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+.pill-orange { background: var(--orange-dim); color: var(--orange); }
+.pill-yellow { background: var(--yellow-dim); color: var(--yellow); }
+.pill-green { background: var(--green-dim); color: var(--green); }
+.card-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.meta-label { font-size: 10px; color: var(--text3); margin-bottom: 2px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.meta-value { font-size: 13px; color: var(--text); font-weight: 500; }
+.card-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 11px; }
+.manager-chip { display: flex; align-items: center; gap: 7px; }
+.avatar { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; background: var(--accent-dim); color: var(--accent); }
+.manager-name { font-size: 12px; color: var(--text2); font-weight: 500; }
+.card-actions { display: flex; gap: 4px; }
+.btn-icon { background: transparent; border: 1px solid var(--border2); border-radius: 7px; padding: 4px 9px; cursor: pointer; font-size: 12px; color: var(--text2); font-family: 'Heebo', sans-serif; transition: all .15s; }
+.btn-icon:hover { background: var(--bg3); color: var(--text); }
+
+/* ── CALENDAR ── */
+.cal-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.cal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 22px; border-bottom: 1px solid var(--border); }
+.cal-title { font-size: 17px; font-weight: 800; }
+.cal-nav-btn { background: var(--bg3); border: 1px solid var(--border2); border-radius: 8px; width: 30px; height: 30px; cursor: pointer; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; color: var(--text2); margin-right: 4px; }
+.cal-nav-btn:hover { background: var(--bg4); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); direction: rtl; }
+.cal-day-name { text-align: center; font-size: 11px; color: var(--text3); padding: 10px 4px; border-bottom: 1px solid var(--border); font-weight: 700; letter-spacing: .06em; }
+.cal-cell { min-height: 82px; border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 6px; }
+.cal-cell:nth-child(7n) { border-left: none; }
+.cal-num { font-size: 11px; color: var(--text3); margin-bottom: 4px; font-weight: 700; }
+.cal-num.today { background: var(--accent); color: #fff; width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; }
+.cal-pill { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-bottom: 2px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; font-weight: 600; }
+.cal-other { opacity: .2; }
+.empty-state { text-align: center; padding: 60px 20px; color: var(--text3); font-size: 14px; font-weight: 500; }
+
+/* ── MODAL ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: 18px; width: 100%; max-width: 700px; max-height: 92vh; overflow-y: auto; direction: rtl; }
+.modal::-webkit-scrollbar { width: 4px; }
+.modal::-webkit-scrollbar-track { background: transparent; }
+.modal::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px 16px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg2); z-index: 5; }
+.modal-title { font-size: 18px; font-weight: 800; }
+.btn-close { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; width: 32px; height: 32px; cursor: pointer; color: var(--text2); font-size: 18px; display: flex; align-items: center; justify-content: center; transition: all .15s; }
+.btn-close:hover { background: var(--bg4); color: var(--text); }
+.modal-body { padding: 20px 24px 24px; }
+.sec-title { font-size: 11px; font-weight: 800; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin: 20px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.sec-title:first-child { margin-top: 0; }
+.sec-box { background: var(--bg3); border-radius: 12px; padding: 16px; border: 1px solid var(--border); }
+.fg { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.full { grid-column: 1 / -1; }
+.ff { display: flex; flex-direction: column; gap: 5px; }
+.ff label { font-size: 11px; color: var(--text2); font-weight: 700; letter-spacing: .02em; }
+.ff input, .ff select, .ff textarea {
+  font-size: 13px; padding: 8px 11px; border: 1px solid var(--border2);
+  border-radius: 8px; background: var(--bg4); color: var(--text);
+  direction: rtl; text-align: right; width: 100%; font-family: 'Heebo', sans-serif;
+  transition: border-color .15s;
+}
+.ff input:focus, .ff select:focus, .ff textarea:focus { outline: none; border-color: var(--accent); }
+.ff select option { background: var(--bg4); }
+.ff textarea { resize: vertical; min-height: 58px; }
+.modal-footer { display: flex; gap: 8px; justify-content: flex-start; padding: 16px 24px; border-top: 1px solid var(--border); background: var(--bg3); border-radius: 0 0 18px 18px; position: sticky; bottom: 0; }
+.btn-primary { background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 10px 22px; font-size: 13px; cursor: pointer; font-weight: 700; font-family: 'Heebo', sans-serif; transition: opacity .2s; }
+.btn-primary:hover { opacity: .88; }
+.btn-secondary { background: var(--bg4); border: 1px solid var(--border2); border-radius: 10px; padding: 10px 18px; font-size: 13px; cursor: pointer; color: var(--text); font-weight: 600; font-family: 'Heebo', sans-serif; }
+.btn-secondary:hover { background: var(--bg2); }
+.btn-danger { background: rgba(239,68,68,.15); color: var(--red); border: 1px solid rgba(239,68,68,.3); border-radius: 10px; padding: 10px 18px; font-size: 13px; cursor: pointer; font-weight: 700; font-family: 'Heebo', sans-serif; }
+.btn-danger:hover { background: rgba(239,68,68,.25); }
+.detail-row { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.detail-row:last-child { border-bottom: none; }
+.dk { font-size: 12px; color: var(--text3); min-width: 140px; flex-shrink: 0; font-weight: 600; padding-top: 1px; }
+.dv { font-size: 13px; color: var(--text); font-weight: 500; }
+
+/* ── STATUS SEG ── */
+.status-seg { display: flex; border-radius: 10px; overflow: hidden; border: 1px solid var(--border2); }
+.status-seg button { flex: 1; padding: 10px 4px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; border-left: 1px solid var(--border2); background: var(--bg4); color: var(--text3); transition: all .15s; font-family: 'Heebo', sans-serif; }
+.status-seg button:last-child { border-left: none; }
+.status-seg button.s-orange { background: var(--orange-dim); color: var(--orange); }
+.status-seg button.s-yellow { background: var(--yellow-dim); color: var(--yellow); }
+.status-seg button.s-green { background: var(--green-dim); color: var(--green); }
+
+/* ── CONTACTS ── */
+.contact-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: end; margin-bottom: 10px; }
+.btn-add-row { background: transparent; border: 1.5px dashed var(--border2); border-radius: 10px; padding: 8px; font-size: 12px; cursor: pointer; color: var(--text3); width: 100%; text-align: center; margin-top: 6px; font-weight: 700; font-family: 'Heebo', sans-serif; transition: all .15s; }
+.btn-add-row:hover { border-color: var(--accent); color: var(--accent); }
+.btn-rm { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.2); border-radius: 7px; padding: 6px 10px; cursor: pointer; color: var(--red); font-size: 12px; }
+.btn-rm:hover { background: rgba(239,68,68,.2); }
+
+/* ── TOAST ── */
+.toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: var(--bg4); border: 1px solid var(--border2); color: var(--text); padding: 11px 24px; border-radius: 12px; font-size: 13px; font-weight: 600; z-index: 999; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; box-shadow: var(--shadow-lg); }
+.toast.show { opacity: 1; }
+
+@media(max-width:640px) {
+  .fg, .contact-row { grid-template-columns: 1fr; }
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .chart-row { grid-template-columns: 1fr; }
+  .events-grid { grid-template-columns: 1fr; }
+  .topbar, .content, .filters, .brand-bar { padding-right: 16px; padding-left: 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div id="setup-screen">
+  <div class="setup-card">
+    <div class="setup-logo">🗓</div>
+    <div class="setup-title">חיבור ל-Supabase</div>
+    <div class="setup-sub">הכנס את פרטי הפרויקט שלך.<br>הפרטים נשמרים רק בדפדפן שלך.</div>
+    <div class="setup-field"><label>Project URL</label><input id="sb-url" type="text" placeholder="https://xxxx.supabase.co" dir="ltr"></div>
+    <div class="setup-field"><label>Anon Public Key</label><input id="sb-key" type="text" placeholder="eyJhbGciOiJIUzI1NiIs..." dir="ltr"></div>
+    <button class="setup-btn" onclick="connectSupabase()">התחבר →</button>
+    <div class="setup-note">Settings → API ב-Supabase<br><a class="setup-link" href="https://supabase.com" target="_blank">פתח Supabase ↗</a></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+  <input type="file" id="logo-file" accept="image/*" style="display:none" onchange="uploadLogo()">
+  <div class="topbar">
+    <div class="logo-area">
+      <div class="logo-box" id="logo-box">א</div>
+      <span class="brand-name" id="brand-name-display">ניהול אירועים</span>
+    </div>
+    <div class="topbar-right">
+      <div class="sync-wrap"><div class="sync-dot ok" id="sync-dot"></div><span id="sync-text">מחובר</span></div>
+      <div class="view-tabs">
+        <button class="view-tab active" onclick="switchView('list')" id="tab-list">כרטיסיות</button>
+        <button class="view-tab" onclick="switchView('week')" id="tab-week">שבוע</button>
+        <button class="view-tab" onclick="switchView('calendar')" id="tab-cal">לוח שנה</button>
+      </div>
+      <button class="btn-add" onclick="openModal('add')">+ אירוע חדש</button>
+      <button class="profile-btn" onclick="openVenueProfile()">
+        <div class="profile-icon">⚙</div>
+        פרופיל האולם
+      </button>
+    </div>
+  </div>
+
+  <div class="filters">
+    <div class="filter-group"><label>מ:</label><input type="date" id="ff" onchange="applyF()"></div>
+    <div class="filter-group"><label>עד:</label><input type="date" id="ft" onchange="applyF()"></div>
+    <div class="filter-group"><label>סוג:</label>
+      <select id="ftype" onchange="applyF()">
+        <option value="">הכל</option>
+        <option>תאטרון</option><option>סביב שולחנות</option><option>עמידה</option>
+      </select>
+    </div>
+    <div class="filter-group"><label>מנהל:</label><select id="fmgr" onchange="applyF()"><option value="">הכל</option></select></div>
+    <div class="filter-group"><label>סטטוס:</label>
+      <select id="fstatus" onchange="applyF()">
+        <option value="">הכל</option>
+        <option>הצעת מחיר</option><option>לקראת סגירה</option><option>סגור</option>
+      </select>
+    </div>
+    <button class="btn-clear" onclick="clearF()">נקה</button>
+  </div>
+
+  <div class="content">
+    <div class="stats-row" id="stats-row"></div>
+    <div class="chart-row" id="chart-row"></div>
+    <div id="view-list">
+      <div class="events-grid" id="events-grid"></div>
+      <div class="empty-state" id="empty-state" style="display:none">אין אירועים התואמים את הסינון</div>
+    </div>
+    <div id="view-week" style="display:none">
+      <div class="week-wrap" id="week-wrap"></div>
+    </div>
+    <div id="view-cal" style="display:none">
+      <div class="cal-wrap">
+        <div class="cal-header">
+          <div class="cal-title" id="cal-title"></div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="btn-secondary" onclick="goToday()" style="padding:5px 12px;font-size:12px">היום</button>
+            <button class="cal-nav-btn" onclick="calNav(1)">‹</button>
+            <button class="cal-nav-btn" onclick="calNav(-1)">›</button>
+          </div>
+        </div>
+        <div class="cal-grid" id="cal-days"></div>
+        <div class="cal-grid" id="cal-cells"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="mc"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const HEM=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+const HED=['ש','ו','ה','ד','ג','ב','א'];
+const TYPES=['תאטרון','סביב שולחנות','עמידה'];
+const ECATS=['כנס','כרטיסים','השכרת אולם'];
+
+const SC={
+  'הצעת מחיר':  {bar:'#f59e0b', pill:'pill-orange', seg:'s-orange', glow:'#f59e0b'},
+  'לקראת סגירה':{bar:'#eab308', pill:'pill-yellow', seg:'s-yellow', glow:'#eab308'},
+  'סגור':        {bar:'#22c55e', pill:'pill-green',  seg:'s-green',  glow:'#22c55e'}
+};
+const TC={'תאטרון':{bg:'rgba(79,126,248,.2)',text:'#a5b4fc'},'סביב שולחנות':{bg:'rgba(34,197,94,.15)',text:'#86efac'},'עמידה':{bg:'rgba(251,146,60,.15)',text:'#fdba74'}};
+const ECAT_COLORS={
+  'כנס':          {bg:'rgba(168,85,247,.2)',  text:'#d8b4fe', bar:'#a855f7'},
+  'כרטיסים':      {bg:'rgba(236,72,153,.2)',  text:'#f9a8d4', bar:'#ec4899'},
+  'השכרת אולם':  {bg:'rgba(20,184,166,.2)',   text:'#5eead4', bar:'#14b8a6'}
+};
+
+let sbClient=null, events=[], curView='list', cy=new Date().getFullYear(), cm=new Date().getMonth();
+let filters={from:'',to:'',type:'',mgr:'',status:''};
+let editContacts=[], editStatus='הצעת מחיר', editEcat='כנס';
+let chartInstances={};
+
+// ── SUPABASE ──
+function connectSupabase(){
+  const url=document.getElementById('sb-url').value.trim();
+  const key=document.getElementById('sb-key').value.trim();
+  if(!url||!key){showToast('נא למלא URL ו-Key');return;}
+  try{
+    sbClient=supabase.createClient(url,key);
+    localStorage.setItem('sb_url',url);
+    localStorage.setItem('sb_key',key);
+    document.getElementById('setup-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    loadBrandSettings();
+    loadEvents();
+    setupRealtime();
+  }catch(e){showToast('שגיאה: '+e.message);}
+}
+
+function resetConnection(){
+  localStorage.removeItem('sb_url');localStorage.removeItem('sb_key');
+  location.reload();
+}
+
+function setSyncStatus(s){
+  const dot=document.getElementById('sync-dot');
+  const txt=document.getElementById('sync-text');
+  if(s==='ok'){dot.className='sync-dot';txt.textContent='מחובר';}
+  else if(s==='loading'){dot.className='sync-dot loading';txt.textContent='מסנכרן...';}
+  else{dot.className='sync-dot error';txt.textContent='שגיאה';}
+}
+
+async function loadEvents(){
+  setSyncStatus('loading');
+  try{
+    const{data,error}=await sbClient.from('events').select('*').order('date',{ascending:true});
+    if(error)throw error;
+    events=data.map(dbToLocal);
+    setSyncStatus('ok');
+    initMgr();render();
+  }catch(e){setSyncStatus('error');showToast('שגיאה בטעינה');}
+}
+
+function setupRealtime(){
+  sbClient.channel('events-rt')
+    .on('postgres_changes',{event:'*',schema:'public',table:'events'},()=>loadEvents())
+    .subscribe();
+}
+
+function dbToLocal(r){
+  return{id:r.id,name:r.name,date:r.date,hall:r.hall,type:r.event_type,
+    ecat:r.event_category||'',
+    audience:r.audience||0,notes:r.notes||'',status:r.status||'הצעת מחיר',
+    startTime:r.start_time||'',endTime:r.end_time||'',
+    setupTime:r.setup_time||'',teardownTime:r.teardown_time||'',
+    securityTime:r.security_time||'',balanceTime:r.balance_time||'',
+    bar:r.bar_type||'',bartenders:r.bartenders||0,
+    catering:r.catering||'',portions:r.portions||0,buffet:r.buffet||'',
+    manager:r.manager_name||'',managerPhone:r.manager_phone||'',managerMail:r.manager_mail||'',
+    opTeam:r.op_team||'',techTeam:r.tech_team||'',
+    sound:r.sound||'',lighting:r.lighting||'',screens:r.screens||'',extraTech:r.extra_tech||'',
+    contacts:r.contacts||[]};
+}
+
+function localToDb(d){
+  return{name:d.name,date:d.date||null,hall:d.hall,event_type:d.type,
+    event_category:d.ecat||null,
+    audience:d.audience,notes:d.notes,status:d.status,
+    start_time:d.startTime||null,end_time:d.endTime||null,
+    setup_time:d.setupTime||null,teardown_time:d.teardownTime||null,
+    security_time:d.securityTime||null,balance_time:d.balanceTime||null,
+    bar_type:d.bar,bartenders:d.bartenders,catering:d.catering,portions:d.portions,buffet:d.buffet,
+    manager_name:d.manager,manager_phone:d.managerPhone,manager_mail:d.managerMail,
+    op_team:d.opTeam,tech_team:d.techTeam,
+    sound:d.sound,lighting:d.lighting,screens:d.screens,extra_tech:d.extraTech,
+    contacts:d.contacts};
+}
+
+async function saveEvToDb(id,data){
+  setSyncStatus('loading');
+  try{
+    const db=localToDb(data);
+    let res;
+    if(!id||id==='0'){res=await sbClient.from('events').insert(db).select();}
+    else{res=await sbClient.from('events').update(db).eq('id',id).select();}
+    if(res.error)throw res.error;
+    showToast(!id||id==='0'?'אירוע נוסף ✓':'נשמר ✓');
+    await loadEvents();
+  }catch(e){setSyncStatus('error');showToast('שגיאה בשמירה');}
+}
+
+async function delEvFromDb(id){
+  setSyncStatus('loading');
+  try{
+    const{error}=await sbClient.from('events').delete().eq('id',id);
+    if(error)throw error;
+    showToast('נמחק');await loadEvents();
+  }catch(e){setSyncStatus('error');showToast('שגיאה במחיקה');}
+}
+
+// ── BRAND ──
+function loadBrandSettings(){
+  const vp=JSON.parse(localStorage.getItem('venue_profile')||'{}');
+  const c=vp.accentColor||localStorage.getItem('brand_color')||'#4f7ef8';
+  const n=vp.brandName||localStorage.getItem('brand_name')||'ניהול אירועים';
+  const l=localStorage.getItem('brand_logo')||'';
+  document.getElementById('brand-name-display').textContent=n;
+  applyAccent(c);
+  const box=document.getElementById('logo-box');
+  if(l){box.innerHTML=`<img src="${l}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`;}
+  else{box.textContent=n[0]||'א';}
+}
+
+function applyAccent(c){
+  document.documentElement.style.setProperty('--accent',c);
+  document.documentElement.style.setProperty('--header-bg',c);
+  const hex=c.replace('#','');
+  const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);
+  document.documentElement.style.setProperty('--accent-dim',`rgba(${r},${g},${b},0.15)`);
+}
+
+function updateBrand(){
+  const v=document.getElementById('brand-name-input').value||'ניהול אירועים';
+  document.getElementById('brand-name-display').textContent=v;
+  localStorage.setItem('brand_name',v);
+  const box=document.getElementById('logo-box');
+  if(!box.querySelector('img'))box.textContent=v[0]||'א';
+}
+
+function updateAccent(){
+  const c=document.getElementById('accent-color').value;
+  applyAccent(c);
+  localStorage.setItem('brand_color',c);
+}
+
+function uploadLogo(){
+  const f=document.getElementById('logo-file').files[0];
+  if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    const box=document.getElementById('logo-box');
+    box.innerHTML=`<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:10px">`;
+    localStorage.setItem('brand_logo',e.target.result);
+  };
+  r.readAsDataURL(f);
+}
+
+// ── FILTERS ──
+function getFiltered(){
+  return events.filter(e=>{
+    if(filters.from&&e.date<filters.from)return false;
+    if(filters.to&&e.date>filters.to)return false;
+    if(filters.type&&e.type!==filters.type)return false;
+    if(filters.mgr&&e.manager!==filters.mgr)return false;
+    if(filters.status&&e.status!==filters.status)return false;
+    return true;
+  });
+}
+
+function applyF(){
+  filters.from=document.getElementById('ff').value;
+  filters.to=document.getElementById('ft').value;
+  filters.type=document.getElementById('ftype').value;
+  filters.mgr=document.getElementById('fmgr').value;
+  filters.status=document.getElementById('fstatus').value;
+  render();
+}
+
+function clearF(){
+  filters={from:'',to:'',type:'',mgr:'',status:''};
+  ['ff','ft'].forEach(id=>document.getElementById(id).value='');
+  ['ftype','fmgr','fstatus'].forEach(id=>document.getElementById(id).value='');
+  render();
+}
+
+function initMgr(){
+  const s=document.getElementById('fmgr');
+  const mgrs=[...new Set(events.map(e=>e.manager).filter(Boolean))];
+  s.innerHTML='<option value="">הכל</option>'+mgrs.map(m=>`<option>${m}</option>`).join('');
+}
+
+// ── RENDER ──
+function fd(d){if(!d)return'–';const[y,m,day]=d.split('-');return`${day}/${m}/${y}`}
+function ini(n){return(n||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}
+
+function switchView(v){
+  curView=v;
+  ['list','week','cal'].forEach(x=>{
+    const el=document.getElementById('view-'+x);
+    const tab=document.getElementById('tab-'+(x==='cal'?'cal':x==='week'?'week':'list'));
+    if(el) el.style.display='none';
+    if(tab) tab.classList.remove('active');
+  });
+  const map={list:'view-list',week:'view-week',calendar:'view-cal'};
+  const tabMap={list:'tab-list',week:'tab-week',calendar:'tab-cal'};
+  const el=document.getElementById(map[v]||'view-list');
+  const tab=document.getElementById(tabMap[v]||'tab-list');
+  if(el) el.style.display='';
+  if(tab) tab.classList.add('active');
+  if(v==='calendar') renderCal();
+  if(v==='week') renderWeek();
+}
+
+function renderStats(f){
+  const total=f.length;
+  const quote=f.filter(e=>e.status==='הצעת מחיר').length;
+  const closing=f.filter(e=>e.status==='לקראת סגירה').length;
+  const closed=f.filter(e=>e.status==='סגור').length;
+  document.getElementById('stats-row').innerHTML=`
+    <div class="stat-card c-blue"><div class="stat-glow"></div>
+      <div class="stat-label">סה"כ אירועים</div>
+      <div class="stat-value">${total}</div>
+      <div class="stat-sub">בסינון הנוכחי</div>
+    </div>
+    <div class="stat-card c-orange"><div class="stat-glow"></div>
+      <div class="stat-label">הצעת מחיר</div>
+      <div class="stat-value">${quote}</div>
+      <div class="stat-sub">ממתינים לאישור</div>
+    </div>
+    <div class="stat-card c-yellow"><div class="stat-glow"></div>
+      <div class="stat-label">לקראת סגירה</div>
+      <div class="stat-value">${closing}</div>
+      <div class="stat-sub">בתהליך סגירה</div>
+    </div>
+    <div class="stat-card c-green"><div class="stat-glow"></div>
+      <div class="stat-label">סגורים</div>
+      <div class="stat-value">${closed}</div>
+      <div class="stat-sub">אירועים מאושרים</div>
+    </div>`;
+}
+
+function renderCharts(f){
+  Object.values(chartInstances).forEach(c=>c.destroy());
+  chartInstances={};
+
+  const monthCounts=new Array(12).fill(0);
+  f.forEach(e=>{if(e.date){const m=parseInt(e.date.split('-')[1])-1;if(m>=0&&m<12)monthCounts[m]++;}});
+
+  const ecatCounts=ECATS.map(c=>f.filter(e=>e.ecat===c).length);
+  const ecatBgs=ECATS.map(c=>ECAT_COLORS[c]?.bar+'99'||'#666');
+  const ecatBorders=ECATS.map(c=>ECAT_COLORS[c]?.bar||'#666');
+
+  const chartDefaults={
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1e2433',titleColor:'#f0f2f8',bodyColor:'#8b92a8',borderColor:'rgba(255,255,255,0.07)',borderWidth:1}},
+    scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4a5168',font:{family:'Heebo',size:11}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4a5168',font:{family:'Heebo',size:11},stepSize:1}}}
+  };
+
+  document.getElementById('chart-row').innerHTML=`
+    <div class="chart-card">
+      <div class="chart-title">אירועים לפי חודש</div>
+      <div class="chart-wrap"><canvas id="chart-month"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">התפלגות לפי קטגוריה</div>
+      <div class="chart-wrap"><canvas id="chart-type"></canvas></div>
+    </div>`;
+
+  const accent=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#4f7ef8';
+
+  chartInstances.month=new Chart(document.getElementById('chart-month'),{
+    type:'bar',
+    data:{labels:HEM,datasets:[{data:monthCounts,backgroundColor:accent+'33',borderColor:accent,borderWidth:1.5,borderRadius:5}]},
+    options:{...chartDefaults}
+  });
+
+  chartInstances.type=new Chart(document.getElementById('chart-type'),{
+    type:'doughnut',
+    data:{
+      labels:ECATS,
+      datasets:[{data:ecatCounts,backgroundColor:ecatBgs,borderColor:ecatBorders,borderWidth:1.5}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:'right',labels:{color:'#8b92a8',font:{family:'Heebo',size:12},padding:12,boxWidth:12}},
+        tooltip:{backgroundColor:'#1e2433',titleColor:'#f0f2f8',bodyColor:'#8b92a8',borderColor:'rgba(255,255,255,0.07)',borderWidth:1}},
+      cutout:'65%'}
+  });
+}
+
+function renderList(){
+  const f=getFiltered();
+  renderStats(f);
+  renderCharts(f);
+  const g=document.getElementById('events-grid');
+  const em=document.getElementById('empty-state');
+  if(!f.length){g.innerHTML='';em.style.display='';return;}
+  em.style.display='none';
+  g.innerHTML=f.map(e=>{
+    const s=SC[e.status]||{bar:'#666',pill:'',seg:''};
+    const t=TC[e.type]||{bg:'rgba(255,255,255,.05)',text:'#8b92a8'};
+    return`<div class="event-card" onclick="openDetail('${e.id}')">
+      <div class="card-bar" style="background:${s.bar}"></div>
+      <div class="card-body">
+        <div class="card-header">
+          <div class="card-title">${e.name}</div>
+          <span class="status-pill ${s.pill}">${e.status}</span>
+        </div>
+        <div class="card-meta">
+          <div><div class="meta-label">תאריך</div><div class="meta-value">${fd(e.date)}</div></div>
+          <div><div class="meta-label">שעות</div><div class="meta-value">${e.startTime||'–'}–${e.endTime||'–'}</div></div>
+          <div><div class="meta-label">אולם</div><div class="meta-value">${e.hall||'–'}</div></div>
+          <div><div class="meta-label">סוג</div><div class="meta-value"><span style="background:${t.bg};color:${t.text};padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${e.type||'–'}</span></div></div>
+        </div>
+        <div class="card-footer">
+          <div class="manager-chip"><div class="avatar">${ini(e.manager)}</div><div class="manager-name">${e.manager||'–'}</div></div>
+          <div class="card-actions" onclick="event.stopPropagation()">
+            <button class="btn-icon" onclick="openModal('edit','${e.id}')">✏</button>
+            <button class="btn-icon" onclick="confirmDel('${e.id}')" style="color:#ef4444">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCal(){
+  const f=getFiltered();
+  document.getElementById('cal-title').textContent=`${HEM[cm]} ${cy}`;
+  document.getElementById('cal-days').innerHTML=HED.map(d=>`<div class="cal-day-name">${d}</div>`).join('');
+  const cells=document.getElementById('cal-cells');
+  const first=new Date(cy,cm,1).getDay();
+  const dim=new Date(cy,cm+1,0).getDate();
+  const tod=new Date();
+  const rtl=(6-first+7)%7;
+  let h='';
+  const prev=new Date(cy,cm,0).getDate();
+  for(let i=0;i<rtl;i++)h+=`<div class="cal-cell cal-other"><div class="cal-num">${prev-rtl+i+1}</div></div>`;
+  for(let d=1;d<=dim;d++){
+    const ds=`${cy}-${String(cm+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const de=f.filter(e=>e.date===ds);
+    const it=tod.getFullYear()===cy&&tod.getMonth()===cm&&tod.getDate()===d;
+    const ne=it?`<div class="cal-num today">${d}</div>`:`<div class="cal-num">${d}</div>`;
+    const pills=de.map(e=>{const s=SC[e.status]||{bar:'#666'};return`<span class="cal-pill" style="background:${s.bar}20;color:${s.bar};border:1px solid ${s.bar}40" onclick="openDetail('${e.id}')">${e.name}</span>`;}).join('');
+    h+=`<div class="cal-cell">${ne}${pills}</div>`;
+  }
+  const used=rtl+dim;const rem=used%7;
+  if(rem>0)for(let d=1;d<=7-rem;d++)h+=`<div class="cal-cell cal-other"><div class="cal-num">${d}</div></div>`;
+  cells.innerHTML=h;
+}
+
+function calNav(dir){cm+=dir;if(cm>11){cm=0;cy++;}if(cm<0){cm=11;cy--;}renderCal();}
+function goToday(){const t=new Date();cy=t.getFullYear();cm=t.getMonth();renderCal();}
+
+// ── WEEK VIEW ──
+let weekStart=new Date();
+weekStart.setDate(weekStart.getDate()-weekStart.getDay());
+
+function renderWeek(){
+  const f=getFiltered();
+  const days=[];
+  for(let i=6;i>=0;i--){const d=new Date(weekStart);d.setDate(d.getDate()+i);days.push(d);}
+  const todayStr=new Date().toISOString().slice(0,10);
+  const hours=['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00','23:00'];
+  let headHtml=`<div class="week-day-head" style="border-left:none;background:var(--bg3)">
+    <button onclick="weekNav(-1)" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:16px">›</button>
+    <button onclick="weekNav(1)" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:16px">‹</button>
+  </div>`;
+  days.forEach(d=>{
+    const ds=d.toISOString().slice(0,10);
+    const isToday=ds===todayStr;
+    headHtml+=`<div class="week-day-head${isToday?' today-col':''}">${['א','ב','ג','ד','ה','ו','ש'][d.getDay()]}<br><span style="font-size:14px;font-weight:800">${d.getDate()}</span></div>`;
+  });
+  let bodyHtml='<div class="week-time-col">';
+  hours.forEach(h=>bodyHtml+=`<div class="week-time-slot">${h}</div>`);
+  bodyHtml+='</div>';
+  days.forEach(d=>{
+    const ds=d.toISOString().slice(0,10);
+    const dayEvs=f.filter(e=>e.date===ds);
+    bodyHtml+=`<div class="week-day-col">`;
+    dayEvs.forEach((e,i)=>{
+      const s=SC[e.status]||{bar:'#666'};
+      const top=e.startTime?((parseInt(e.startTime)-8)*52)+'px':'10px';
+      bodyHtml+=`<div class="week-event-block" style="background:${s.bar}22;border:1.5px solid ${s.bar};color:${s.bar};top:${top};z-index:${i+1}" onclick="openDetail('${e.id}')">${e.name}<br><span style="font-size:9px;opacity:.8">${e.startTime||''}</span></div>`;
+    });
+    bodyHtml+=`</div>`;
+  });
+  document.getElementById('week-wrap').innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border)">
+      <div style="font-size:16px;font-weight:800" id="week-title"></div>
+      <button class="btn-secondary" onclick="goTodayWeek()" style="padding:5px 12px;font-size:12px">השבוע</button>
+    </div>
+    <div class="week-header">${headHtml}</div>
+    <div class="week-body">${bodyHtml}</div>`;
+  const ws=new Date(weekStart);const we=new Date(weekStart);we.setDate(we.getDate()+6);
+  const el=document.getElementById('week-title');
+  if(el)el.textContent=`${we.getDate()}/${we.getMonth()+1} — ${ws.getDate()}/${ws.getMonth()+1}/${ws.getFullYear()}`;
+}
+function weekNav(dir){weekStart.setDate(weekStart.getDate()+(dir*7));renderWeek();}
+function goTodayWeek(){weekStart=new Date();weekStart.setDate(weekStart.getDate()-weekStart.getDay());renderWeek();}
+
+// ── VENUE PROFILE MODAL ──
+function openVenueProfile(){
+  const vp=JSON.parse(localStorage.getItem('venue_profile')||'{}');
+  const users=JSON.parse(localStorage.getItem('venue_users')||'[]');
+  document.getElementById('mc').innerHTML=`
+    <div class="modal-overlay" onclick="if(event.target===this)closeMC()">
+    <div class="modal" style="max-width:600px">
+      <div class="modal-header">
+        <span class="modal-title">⚙ פרופיל האולם</span>
+        <button class="btn-close" onclick="closeMC()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="venue-tabs">
+          <button class="venue-tab active" onclick="showVenueTab('info',this)">פרטי האולם</button>
+          <button class="venue-tab" onclick="showVenueTab('brand',this)">מיתוג</button>
+          <button class="venue-tab" onclick="showVenueTab('users',this)">משתמשים</button>
+          <button class="venue-tab" onclick="showVenueTab('connect',this)">חיבורים</button>
+        </div>
+        <div id="vtab-info">
+          <div class="sec-box"><div class="fg">
+            <div class="ff full"><label>שם האולם</label><input id="vname" value="${vp.name||''}"></div>
+            <div class="ff full"><label>כתובת</label><input id="vaddr" value="${vp.address||''}" placeholder="רחוב, עיר"></div>
+            <div class="ff"><label>טלפון</label><input id="vphone" value="${vp.phone||''}"></div>
+            <div class="ff"><label>מייל</label><input id="vmail" value="${vp.mail||''}"></div>
+            <div class="ff full"><label>אתר</label><input id="vweb" value="${vp.web||''}" placeholder="https://"></div>
+          </div></div>
+          ${vp.address?`<button class="waze-btn" onclick="openWaze('${vp.address}')">🧭 נווט בWaze</button>`:''}
+        </div>
+        <div id="vtab-brand" style="display:none">
+          <div class="sec-box"><div class="fg">
+            <div class="ff full"><label>שם לתצוגה</label><input id="vbrand" value="${vp.brandName||''}" oninput="document.getElementById('brand-name-display').textContent=this.value||'ניהול אירועים'"></div>
+            <div class="ff"><label>צבע ראשי</label><input type="color" id="vaccent" value="${vp.accentColor||'#4f7ef8'}" oninput="applyAccent(this.value)" style="width:100%;height:40px;border-radius:8px;border:1px solid var(--border2);background:none;cursor:pointer"></div>
+            <div class="ff"><label>לוגו</label><label class="logo-upload-btn" for="logo-file" style="display:block;text-align:center;padding:10px">העלה לוגו</label></div>
+          </div></div>
+        </div>
+        <div id="vtab-users" style="display:none">
+          <div class="sec-box">
+            <div id="users-list">${users.map((u,i)=>`<div class="user-row"><div class="ff"><input value="${u.name}" oninput="venueUsers[${i}].name=this.value" placeholder="שם"></div><div class="ff"><input value="${u.mail}" oninput="venueUsers[${i}].mail=this.value" placeholder="מייל"></div><button class="btn-rm" onclick="removeUser(${i})">✕</button></div>`).join('')}</div>
+            <button class="btn-add-row" onclick="addUser()">+ הוסף משתמש</button>
+          </div>
+        </div>
+        <div id="vtab-connect" style="display:none">
+          <div class="sec-box">
+            <div class="detail-row"><div class="dk">Supabase</div><div class="dv" style="color:var(--green)">מחובר ✓</div></div>
+            <div class="detail-row"><div class="dk">Google Calendar</div><div class="dv"><button onclick="showToast('בקרוב!')" style="background:var(--bg4);border:1px solid var(--border2);border-radius:7px;padding:5px 12px;color:var(--text2);cursor:pointer;font-family:Heebo,sans-serif;font-size:12px">חבר</button></div></div>
+            <div class="detail-row"><div class="dk">Google Drive</div><div class="dv"><button onclick="showToast('בקרוב!')" style="background:var(--bg4);border:1px solid var(--border2);border-radius:7px;padding:5px 12px;color:var(--text2);cursor:pointer;font-family:Heebo,sans-serif;font-size:12px">חבר</button></div></div>
+            <div class="detail-row"><div class="dk">שנה חיבור Supabase</div><div class="dv"><button onclick="resetConnection()" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:7px;padding:5px 12px;color:#fca5a5;cursor:pointer;font-family:Heebo,sans-serif;font-size:12px">שנה</button></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeMC()">סגור</button>
+        <button class="btn-primary" onclick="saveVenueProfile()">שמור</button>
+      </div>
+    </div></div>`;
+  venueUsers=JSON.parse(JSON.stringify(users));
+}
+
+let venueUsers=[];
+function showVenueTab(tab,btn){
+  ['info','brand','users','connect'].forEach(t=>document.getElementById('vtab-'+t).style.display='none');
+  document.getElementById('vtab-'+tab).style.display='';
+  document.querySelectorAll('.venue-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function addUser(){venueUsers.push({name:'',mail:''});const l=document.getElementById('users-list');if(l)l.innerHTML=venueUsers.map((u,i)=>`<div class="user-row"><div class="ff"><input value="${u.name}" oninput="venueUsers[${i}].name=this.value" placeholder="שם"></div><div class="ff"><input value="${u.mail}" oninput="venueUsers[${i}].mail=this.value" placeholder="מייל"></div><button class="btn-rm" onclick="removeUser(${i})">✕</button></div>`).join('');}
+function removeUser(i){venueUsers.splice(i,1);addUser();venueUsers.pop();}
+function openWaze(addr){window.open('https://waze.com/ul?q='+encodeURIComponent(addr),'_blank');}
+function saveVenueProfile(){
+  const vp={
+    name:document.getElementById('vname')?.value||'',
+    address:document.getElementById('vaddr')?.value||'',
+    phone:document.getElementById('vphone')?.value||'',
+    mail:document.getElementById('vmail')?.value||'',
+    web:document.getElementById('vweb')?.value||'',
+    brandName:document.getElementById('vbrand')?.value||'',
+    accentColor:document.getElementById('vaccent')?.value||'#4f7ef8'
+  };
+  localStorage.setItem('venue_profile',JSON.stringify(vp));
+  localStorage.setItem('venue_users',JSON.stringify(venueUsers));
+  if(vp.brandName)document.getElementById('brand-name-display').textContent=vp.brandName;
+  if(vp.accentColor)applyAccent(vp.accentColor);
+  closeMC();showToast('פרופיל נשמר ✓');
+}
+
+// ── DETAIL ──
+function openDetail(id){
+  const e=events.find(x=>x.id===id);if(!e)return;
+  const s=SC[e.status]||{bar:'#666',pill:''};
+  const contacts=e.contacts&&e.contacts.length
+    ?e.contacts.map(c=>`<div class="detail-row"><div class="dk">${c.role||'–'}</div><div class="dv">${c.name} | ${c.phone}</div></div>`).join('')
+    :`<span style="font-size:13px;color:var(--text3)">אין אנשי קשר</span>`;
+  document.getElementById('mc').innerHTML=`
+    <div class="modal-overlay" onclick="if(event.target===this)closeMC()">
+    <div class="modal">
+      <div class="modal-header">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:4px;height:26px;border-radius:3px;background:${s.bar}"></div>
+          <span class="modal-title">${e.name}</span>
+          <span class="status-pill ${s.pill}">${e.status}</span>
+        </div>
+        <button class="btn-close" onclick="closeMC()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="sec-title">פרטי אירוע</div>
+        <div class="sec-box">
+          <div class="detail-row"><div class="dk">תאריך</div><div class="dv">${fd(e.date)}</div></div>
+          <div class="detail-row"><div class="dk">אולם</div><div class="dv">${e.hall||'–'}</div></div>
+          <div class="detail-row"><div class="dk">סוג</div><div class="dv">${e.type||'–'}</div></div>
+          <div class="detail-row"><div class="dk">קהל צפוי</div><div class="dv">${e.audience} אנשים</div></div>
+          <div class="detail-row"><div class="dk">הערות</div><div class="dv">${e.notes||'–'}</div></div>
+        </div>
+        <div class="sec-title">שעות</div>
+        <div class="sec-box">
+          <div class="detail-row"><div class="dk">התחלה</div><div class="dv">${e.startTime||'–'}</div></div>
+          <div class="detail-row"><div class="dk">סיום</div><div class="dv">${e.endTime||'–'}</div></div>
+          <div class="detail-row"><div class="dk">באלנס</div><div class="dv">${e.balanceTime||'–'}</div></div>
+          <div class="detail-row"><div class="dk">הקמה</div><div class="dv">${e.setupTime||'–'}</div></div>
+          <div class="detail-row"><div class="dk">פירוק</div><div class="dv">${e.teardownTime||'–'}</div></div>
+          <div class="detail-row"><div class="dk">מאבטח</div><div class="dv">${e.securityTime||'–'}</div></div>
+        </div>
+        <div class="sec-title">שירותים</div>
+        <div class="sec-box">
+          <div class="detail-row"><div class="dk">בר</div><div class="dv">${e.bar||'–'} · ${e.bartenders} ברמנים</div></div>
+          <div class="detail-row"><div class="dk">קייטרינג</div><div class="dv">${e.catering||'–'} · ${e.portions} מנות</div></div>
+          <div class="detail-row"><div class="dk">מזנון</div><div class="dv">${e.buffet||'–'}</div></div>
+        </div>
+        <div class="sec-title">כוח אדם</div>
+        <div class="sec-box">
+          <div class="detail-row"><div class="dk">מנהל</div><div class="dv">${e.manager||'–'} · ${e.managerPhone||'–'}</div></div>
+          <div class="detail-row"><div class="dk">צוות תפעול</div><div class="dv" style="white-space:pre-line">${e.opTeam||'–'}</div></div>
+          <div class="detail-row"><div class="dk">צוות טכני</div><div class="dv" style="white-space:pre-line">${e.techTeam||'–'}</div></div>
+        </div>
+        <div class="sec-title">דרישות טכניות</div>
+        <div class="sec-box">
+          <div class="detail-row"><div class="dk">סאונד</div><div class="dv">${e.sound||'–'}</div></div>
+          <div class="detail-row"><div class="dk">תאורה</div><div class="dv">${e.lighting||'–'}</div></div>
+          <div class="detail-row"><div class="dk">מסכים</div><div class="dv">${e.screens||'–'}</div></div>
+          ${e.extraTech?`<div class="detail-row"><div class="dk">נוספות</div><div class="dv">${e.extraTech}</div></div>`:''}
+        </div>
+        <div class="sec-title">אנשי קשר</div>
+        <div class="sec-box">${contacts}</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-danger" onclick="confirmDel('${e.id}');closeMC()">מחק</button>
+        <button class="btn-secondary" onclick="closeMC()">סגור</button>
+        <button class="btn-pdf" onclick="sharePdf('${e.id}')">PDF ↓</button>
+        <button class="btn-wa" onclick="shareWA('${e.id}')">WhatsApp ↑</button>
+        <button class="btn-secondary" onclick="closeMC();duplicateEvent('${e.id}')">שכפל</button>
+        <button class="btn-primary" onclick="closeMC();openModal('edit','${e.id}')">✏ ערוך</button>
+      </div>
+    </div></div>`;
+}
+
+// ── FORM ──
+function statusSeg(cur){
+  const opts=['הצעת מחיר','לקראת סגירה','סגור'];
+  const cls={'הצעת מחיר':'s-orange','לקראת סגירה':'s-yellow','סגור':'s-green'};
+  return`<div class="status-seg" id="status-seg">${opts.map(o=>`<button onclick="selectStatus('${o}')" class="${cur===o?cls[o]:''}" data-val="${o}">${o}</button>`).join('')}</div>`;
+}
+
+function selectStatus(s){
+  editStatus=s;
+  const cls={'הצעת מחיר':'s-orange','לקראת סגירה':'s-yellow','סגור':'s-green'};
+  document.querySelectorAll('#status-seg button').forEach(b=>{b.className='';if(b.dataset.val===s)b.className=cls[s];});
+}
+
+function selectEcat(c){
+  editEcat=c;
+  document.querySelectorAll('#ecat-seg button').forEach(b=>{
+    const col=ECAT_COLORS[b.dataset.ec];
+    if(b.dataset.ec===c){b.style.background=col.bar+'33';b.style.borderColor=col.bar;b.style.color=col.text;}
+    else{b.style.background='transparent';b.style.borderColor=col.bar+'33';b.style.color=col.text;}
+  });
+}
+// init ecat after modal render
+function initEcatSeg(cur){editEcat=cur||'כנס';setTimeout(()=>selectEcat(editEcat),10);}
+
+function renderContactsEdit(){
+  document.getElementById('contacts-list').innerHTML=editContacts.map((c,i)=>`
+    <div class="contact-row">
+      <div class="ff"><label>שם</label><input value="${c.name||''}" oninput="editContacts[${i}].name=this.value" placeholder="שם"></div>
+      <div class="ff"><label>טלפון</label><input value="${c.phone||''}" oninput="editContacts[${i}].phone=this.value" placeholder="טלפון"></div>
+      <div class="ff"><label>תפקיד</label><input value="${c.role||''}" oninput="editContacts[${i}].role=this.value" placeholder="תפקיד"></div>
+      <div class="ff" style="justify-content:flex-end"><label>&nbsp;</label><button class="btn-rm" onclick="removeContact(${i})">✕</button></div>
+    </div>`).join('');
+}
+function addContact(){editContacts.push({name:'',phone:'',role:''});renderContactsEdit();}
+function removeContact(i){editContacts.splice(i,1);renderContactsEdit();}
+
+function openModal(mode,id){
+  const e=mode==='edit'?events.find(x=>x.id===id)
+    :{id:0,name:'',date:'',hall:'',type:'תאטרון',ecat:'כנס',audience:'',startTime:'',endTime:'',
+      balanceTime:'',setupTime:'',teardownTime:'',securityTime:'',
+      notes:'',status:'הצעת מחיר',bar:'',bartenders:'',catering:'',portions:'',buffet:'',
+      manager:'',managerPhone:'',managerMail:'',opTeam:'',techTeam:'',
+      sound:'',lighting:'',screens:'',extraTech:'',contacts:[]};
+  editStatus=e.status||'הצעת מחיר';
+  editEcat=e.ecat||'כנס';
+  editContacts=JSON.parse(JSON.stringify(e.contacts||[]));
+  const to=TYPES.map(t=>`<option${e.type===t?' selected':''}>${t}</option>`).join('');
+  document.getElementById('mc').innerHTML=`
+    <div class="modal-overlay" onclick="if(event.target===this)closeMC()">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">${mode==='add'?'אירוע חדש':'עריכה: '+e.name}</span>
+        <button class="btn-close" onclick="closeMC()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="sec-title">קטגוריית אירוע</div>
+        <div class="sec-box">
+          <div style="display:flex;gap:8px;" id="ecat-seg">
+            ${ECATS.map(c=>{const col=ECAT_COLORS[c];return`<button onclick="selectEcat('${c}')" data-ec="${c}" style="flex:1;padding:12px 8px;border-radius:10px;border:1.5px solid ${col.bar}33;background:transparent;color:${col.text};font-family:'Heebo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='${col.bar}22'" onmouseout="if(editEcat!=='${c}')this.style.background='transparent'">${c}</button>`}).join('')}
+          </div>
+        </div>
+
+        <div class="sec-title">סטטוס</div>
+        <div class="sec-box">${statusSeg(editStatus)}</div>
+
+        <div class="sec-title">פרטי אירוע</div>
+        <div class="sec-box"><div class="fg">
+          <div class="ff full"><label>שם האירוע</label><input id="fn" value="${e.name}" placeholder="שם האירוע"></div>
+          <div class="ff"><label>תאריך</label><input type="date" id="fd" value="${e.date||''}"></div>
+          <div class="ff"><label>אולם</label><input id="fh" value="${e.hall||''}" placeholder="שם האולם"></div>
+          <div class="ff"><label>סוג אירוע</label><select id="ftp">${to}</select></div>
+          <div class="ff"><label>קהל צפוי</label><input type="number" id="fau" value="${e.audience||''}"></div>
+          <div class="ff full"><label>הערות</label><textarea id="fno">${e.notes||''}</textarea></div>
+        </div></div>
+
+        <div class="sec-title">שעות</div>
+        <div class="sec-box"><div class="fg">
+          <div class="ff"><label>התחלה</label><input type="time" id="fst" value="${e.startTime||''}"></div>
+          <div class="ff"><label>סיום</label><input type="time" id="fen" value="${e.endTime||''}"></div>
+          <div class="ff"><label>באלנס</label><input type="time" id="fba" value="${e.balanceTime||''}"></div>
+          <div class="ff"><label>הקמה</label><input type="time" id="fsu" value="${e.setupTime||''}"></div>
+          <div class="ff"><label>פירוק</label><input type="time" id="fte" value="${e.teardownTime||''}"></div>
+          <div class="ff"><label>מאבטח</label><input type="time" id="fse" value="${e.securityTime||''}"></div>
+        </div></div>
+
+        <div class="sec-title">שירותים</div>
+        <div class="sec-box"><div class="fg">
+          <div class="ff"><label>סוג בר</label><input id="fbr" value="${e.bar||''}"></div>
+          <div class="ff"><label>ברמנים</label><input type="number" id="fbn" value="${e.bartenders||''}"></div>
+          <div class="ff"><label>קייטרינג</label><input id="fca" value="${e.catering||''}"></div>
+          <div class="ff"><label>כמות מנות</label><input type="number" id="fpo" value="${e.portions||''}"></div>
+          <div class="ff full"><label>מזנון</label><input id="fbu" value="${e.buffet||''}"></div>
+        </div></div>
+
+        <div class="sec-title">כוח אדם</div>
+        <div class="sec-box"><div class="fg">
+          <div class="ff"><label>מנהל אירוע</label><input id="fmn" value="${e.manager||''}"></div>
+          <div class="ff"><label>טלפון</label><input id="fmp" value="${e.managerPhone||''}"></div>
+          <div class="ff full"><label>מייל</label><input id="fmm" value="${e.managerMail||''}"></div>
+          <div class="ff full"><label>צוות תפעול</label><textarea id="fot">${e.opTeam||''}</textarea></div>
+          <div class="ff full"><label>צוות טכני</label><textarea id="ftt">${e.techTeam||''}</textarea></div>
+        </div></div>
+
+        <div class="sec-title">דרישות טכניות</div>
+        <div class="sec-box"><div class="fg">
+          <div class="ff full"><label>סאונד</label><textarea id="fso">${e.sound||''}</textarea></div>
+          <div class="ff full"><label>תאורה</label><textarea id="fli">${e.lighting||''}</textarea></div>
+          <div class="ff full"><label>מסכים / וידאו</label><input id="fsc" value="${e.screens||''}"></div>
+          <div class="ff full"><label>דרישות נוספות</label><textarea id="fex">${e.extraTech||''}</textarea></div>
+        </div></div>
+
+        <div class="sec-title">אנשי קשר</div>
+        <div class="sec-box"><div id="contacts-list"></div><button class="btn-add-row" onclick="addContact()">+ הוסף איש קשר</button></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeMC()">ביטול</button>
+        <button class="btn-primary" onclick="saveEv('${mode==='edit'?id:0}')">${mode==='add'?'הוסף אירוע':'שמור שינויים'}</button>
+        ${mode==='edit'?`<button class="btn-secondary" onclick="closeMC();duplicateEvent('${id}')">שכפל אירוע</button>`:''}
+      </div>
+    </div></div>`;
+  renderContactsEdit();
+  initEcatSeg(editEcat);
+}
+
+async function saveEv(id){
+  const g=s=>document.getElementById(s)?.value||'';
+  const data={
+    name:g('fn'),date:g('fd'),hall:g('fh'),type:g('ftp'),ecat:editEcat,
+    audience:parseInt(g('fau'))||0,notes:g('fno'),status:editStatus,
+    startTime:g('fst'),endTime:g('fen'),balanceTime:g('fba'),
+    setupTime:g('fsu'),teardownTime:g('fte'),securityTime:g('fse'),
+    bar:g('fbr'),bartenders:parseInt(g('fbn'))||0,
+    catering:g('fca'),portions:parseInt(g('fpo'))||0,buffet:g('fbu'),
+    manager:g('fmn'),managerPhone:g('fmp'),managerMail:g('fmm'),
+    opTeam:g('fot'),techTeam:g('ftt'),
+    sound:g('fso'),lighting:g('fli'),screens:g('fsc'),extraTech:g('fex'),
+    contacts:JSON.parse(JSON.stringify(editContacts))
+  };
+  if(!data.name){showToast('נא למלא שם אירוע');return;}
+  closeMC();
+  await saveEvToDb(id==='0'?0:id,data);
+}
+
+function confirmDel(id){if(!confirm('למחוק?'))return;delEvFromDb(id);}
+function closeMC(){document.getElementById('mc').innerHTML='';}
+function render(){renderList();if(curView==='calendar')renderCal();if(curView==='week')renderWeek();}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+
+async function duplicateEvent(id){
+  const src=events.find(x=>x.id===id);if(!src)return;
+  const copy={...src,id:0,name:'(עותק) '+src.name};
+  await saveEvToDb(0,copy);
+  showToast('אירוע שוכפל ✓');
+}
+
+function sharePdf(id){
+  const e=events.find(x=>x.id===id);if(!e)return;
+  const win=window.open('','_blank');
+  const vp=JSON.parse(localStorage.getItem('venue_profile')||'{}');
+  win.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>${e.name}</title>
+  <style>body{font-family:Arial,sans-serif;padding:32px;color:#111;direction:rtl}h1{font-size:22px;margin-bottom:4px}h2{font-size:14px;color:#666;border-bottom:1px solid #ddd;padding-bottom:4px;margin:16px 0 8px}table{width:100%;font-size:13px}td{padding:5px 0}td:first-child{color:#666;width:140px}.footer{margin-top:32px;font-size:11px;color:#aaa}@media print{@page{margin:20mm}}</style></head>
+  <body><h1>${e.name}</h1><p style="color:#888;font-size:12px">${vp.name||''}</p>
+  <h2>פרטי אירוע</h2><table><tr><td>תאריך</td><td>${fd(e.date)}</td></tr><tr><td>שעות</td><td>${e.startTime||'–'} – ${e.endTime||'–'}</td></tr><tr><td>אולם</td><td>${e.hall||'–'}</td></tr><tr><td>סטטוס</td><td>${e.status}</td></tr><tr><td>קהל</td><td>${e.audience}</td></tr></table>
+  <h2>שעות</h2><table><tr><td>באלנס</td><td>${e.balanceTime||'–'}</td></tr><tr><td>הקמה</td><td>${e.setupTime||'–'}</td></tr><tr><td>פירוק</td><td>${e.teardownTime||'–'}</td></tr><tr><td>מאבטח</td><td>${e.securityTime||'–'}</td></tr></table>
+  <h2>שירותים</h2><table><tr><td>בר</td><td>${e.bar||'–'}</td></tr><tr><td>קייטרינג</td><td>${e.catering||'–'} · ${e.portions} מנות</td></tr></table>
+  <h2>כוח אדם</h2><table><tr><td>מנהל אירוע</td><td>${e.manager||'–'} | ${e.managerPhone||'–'}</td></tr><tr><td>צוות תפעול</td><td>${e.opTeam||'–'}</td></tr><tr><td>צוות טכני</td><td>${e.techTeam||'–'}</td></tr></table>
+  <h2>דרישות טכניות</h2><table><tr><td>סאונד</td><td>${e.sound||'–'}</td></tr><tr><td>תאורה</td><td>${e.lighting||'–'}</td></tr><tr><td>מסכים</td><td>${e.screens||'–'}</td></tr></table>
+  <div class="footer">הופק מתוך מערכת ניהול אירועים · ${new Date().toLocaleDateString('he-IL')}</div>
+  <script>window.onload=()=>window.print()<\/script></body></html>`);
+  win.document.close();
+}
+
+function shareWA(id){
+  const e=events.find(x=>x.id===id);if(!e)return;
+  const vp=JSON.parse(localStorage.getItem('venue_profile')||'{}');
+  const txt=`*${e.name}*\n📅 ${fd(e.date)} | ⏰ ${e.startTime||'–'}–${e.endTime||'–'}\n🏛 ${e.hall||'–'}${vp.address?'\n📍 '+vp.address:''}\n👥 קהל: ${e.audience}\n📋 סטטוס: ${e.status}\n👤 מנהל אירוע: ${e.manager||'–'} ${e.managerPhone||''}\n\n🔧 הקמה: ${e.setupTime||'–'} | פירוק: ${e.teardownTime||'–'}\n🔒 מאבטח: ${e.securityTime||'–'}`;
+  window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
+}
+
+// ── INIT ──
+const savedUrl=localStorage.getItem('sb_url');
+const savedKey=localStorage.getItem('sb_key');
+if(savedUrl&&savedKey){
+  document.getElementById('sb-url').value=savedUrl;
+  document.getElementById('sb-key').value=savedKey;
+  connectSupabase();
+}
+</script>
+</body>
+</html>
