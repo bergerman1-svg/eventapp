@@ -54,8 +54,9 @@ body { font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--tex
 /* ── TOPBAR ── */
 .topbar { display: flex; align-items: center; justify-content: space-between; padding: 0 28px; height: 88px; background: var(--header-bg); border-bottom: 1px solid rgba(255,255,255,0.1); position: sticky; top: 0; z-index: 40; transition: background .4s; }
 .logo-area { display: flex; align-items: center; gap: 14px; }
-.logo-box { width: 64px; height: 64px; border-radius: 16px; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 900; color: #fff; overflow: hidden; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.25); }
-.logo-box img { width: 100%; height: 100%; object-fit: cover; border-radius: 14px; }
+.logo-box { height: 62px; min-width: 62px; max-width: 180px; border-radius: 12px; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 900; color: #fff; overflow: hidden; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.25); padding: 0; }
+.logo-box img { height: 100%; width: auto; max-width: 180px; object-fit: contain; display: block; border-radius: 10px; }
+.logo-box.text-only { width: 62px; }
 .brand-name { font-size: 22px; font-weight: 900; color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,0.25); }
 .topbar-right { display: flex; align-items: center; gap: 10px; }
 .view-tabs { display: flex; gap: 2px; background: rgba(255,255,255,0.12); border-radius: 10px; padding: 3px; }
@@ -75,6 +76,8 @@ body { font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--tex
 .profile-btn { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.25); border-radius: 10px; padding: 7px 14px; cursor: pointer; color: #fff; font-family: 'Heebo',sans-serif; font-size: 13px; font-weight: 600; transition: all .15s; }
 .profile-btn:hover { background: rgba(255,255,255,0.25); }
 .profile-icon { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.dash-btn { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.9); border: none; border-radius: 10px; padding: 7px 14px; cursor: pointer; color: var(--header-bg); font-family: 'Heebo',sans-serif; font-size: 13px; font-weight: 800; transition: all .15s; }
+.dash-btn:hover { background: #fff; }
 
 /* ── VENUE MODAL ── */
 .venue-tabs { display: flex; gap: 2px; background: var(--bg3); border-radius: 10px; padding: 3px; margin-bottom: 18px; }
@@ -233,6 +236,12 @@ body { font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--tex
 .btn-rm { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.2); border-radius: 7px; padding: 6px 10px; cursor: pointer; color: var(--red); font-size: 12px; }
 .btn-rm:hover { background: rgba(239,68,68,.2); }
 
+/* ── DATE PICKER ── */
+.ff input[type=date] { cursor: pointer; }
+.ff input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.6); cursor: pointer; width: 18px; height: 18px; }
+.date-field-wrap { position: relative; }
+.date-field-wrap input[type=date] { padding-left: 36px; }
+
 /* ── TOAST ── */
 .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: var(--bg4); border: 1px solid var(--border2); color: var(--text); padding: 11px 24px; border-radius: 12px; font-size: 13px; font-weight: 600; z-index: 999; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; box-shadow: var(--shadow-lg); }
 .toast.show { opacity: 1; }
@@ -248,16 +257,32 @@ body { font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--tex
 </head>
 <body>
 
-<!-- SETUP -->
+<!-- SETUP / LOGIN -->
 <div id="setup-screen">
-  <div class="setup-card">
-    <div class="setup-logo">🗓</div>
+  <div class="setup-card" id="login-panel">
+    <div class="setup-logo" id="login-logo">🗓</div>
+    <div class="setup-title" id="login-venue-name">ניהול אירועים</div>
+    <div class="setup-sub">התחבר כדי להיכנס למערכת</div>
+    <div class="setup-field"><label>מייל</label><input id="login-mail" type="email" placeholder="your@email.com" dir="ltr"></div>
+    <div class="setup-field"><label>סיסמה</label>
+      <div style="position:relative">
+        <input id="login-pass" type="password" placeholder="••••••••" dir="ltr" onkeydown="if(event.key==='Enter')doLogin()" style="width:100%;padding-left:40px">
+        <button onclick="togglePass()" type="button" id="eye-btn" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:#8b92a8;line-height:1">👁</button>
+      </div>
+    </div>
+    <button class="setup-btn" onclick="doLogin()">כניסה למערכת →</button>
+    <div id="login-err" style="color:#f87171;font-size:12px;text-align:center;margin-top:10px;display:none"></div>
+  </div>
+
+  <div class="setup-card" id="setup-panel" style="display:none">
+    <div class="setup-logo">⚙</div>
     <div class="setup-title">חיבור ל-Supabase</div>
     <div class="setup-sub">הכנס את פרטי הפרויקט שלך.<br>הפרטים נשמרים רק בדפדפן שלך.</div>
     <div class="setup-field"><label>Project URL</label><input id="sb-url" type="text" placeholder="https://xxxx.supabase.co" dir="ltr"></div>
     <div class="setup-field"><label>Anon Public Key</label><input id="sb-key" type="text" placeholder="eyJhbGciOiJIUzI1NiIs..." dir="ltr"></div>
-    <button class="setup-btn" onclick="connectSupabase()">התחבר →</button>
+    <button class="setup-btn" onclick="saveSupabaseConfig()">שמור והמשך →</button>
     <div class="setup-note">Settings → API ב-Supabase<br><a class="setup-link" href="https://supabase.com" target="_blank">פתח Supabase ↗</a></div>
+    <div style="margin-top:14px;text-align:center"><span style="cursor:pointer;color:var(--accent);font-size:12px" onclick="showLoginPanel()">← חזור לכניסה</span></div>
   </div>
 </div>
 
@@ -271,15 +296,20 @@ body { font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--tex
     </div>
     <div class="topbar-right">
       <div class="sync-wrap"><div class="sync-dot ok" id="sync-dot"></div><span id="sync-text">מחובר</span></div>
+      <span id="role-badge" style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;"></span>
       <div class="view-tabs">
         <button class="view-tab active" onclick="switchView('list')" id="tab-list">כרטיסיות</button>
         <button class="view-tab" onclick="switchView('week')" id="tab-week">שבוע</button>
         <button class="view-tab" onclick="switchView('calendar')" id="tab-cal">לוח שנה</button>
       </div>
-      <button class="btn-add" onclick="openModal('add')">+ אירוע חדש</button>
-      <button class="profile-btn" onclick="openVenueProfile()">
+      <button class="btn-add" id="topbar-add-btn" onclick="openModal('add')">+ אירוע חדש</button>
+      <button class="dash-btn" id="topbar-dash-btn" onclick="switchView('list');showDashboard()">📊 Dashboard</button>
+      <button class="profile-btn" id="topbar-profile-btn" onclick="openVenueProfile()">
         <div class="profile-icon">⚙</div>
         פרופיל האולם
+      </button>
+      <button class="profile-btn" onclick="doLogout()" style="background:rgba(239,68,68,0.2);border-color:rgba(239,68,68,0.3)" title="התנתק">
+        יציאה
       </button>
     </div>
   </div>
@@ -290,7 +320,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--tex
     <div class="filter-group"><label>סוג:</label>
       <select id="ftype" onchange="applyF()">
         <option value="">הכל</option>
-        <option>תאטרון</option><option>סביב שולחנות</option><option>עמידה</option>
+        <option>סידור אולם</option><option>סביב שולחנות</option><option>עמידה</option>
       </select>
     </div>
     <div class="filter-group"><label>מנהל:</label><select id="fmgr" onchange="applyF()"><option value="">הכל</option></select></div>
@@ -336,7 +366,7 @@ body { font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--tex
 <script>
 const HEM=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 const HED=['ש','ו','ה','ד','ג','ב','א'];
-const TYPES=['תאטרון','סביב שולחנות','עמידה'];
+const TYPES=['סידור אולם','סביב שולחנות','עמידה'];
 const ECATS=['כנס','כרטיסים','השכרת אולם'];
 
 const SC={
@@ -344,7 +374,7 @@ const SC={
   'לקראת סגירה':{bar:'#eab308', pill:'pill-yellow', seg:'s-yellow', glow:'#eab308'},
   'סגור':        {bar:'#22c55e', pill:'pill-green',  seg:'s-green',  glow:'#22c55e'}
 };
-const TC={'תאטרון':{bg:'rgba(79,126,248,.2)',text:'#a5b4fc'},'סביב שולחנות':{bg:'rgba(34,197,94,.15)',text:'#86efac'},'עמידה':{bg:'rgba(251,146,60,.15)',text:'#fdba74'}};
+const TC={'סידור אולם':{bg:'rgba(79,126,248,.2)',text:'#a5b4fc'},'סביב שולחנות':{bg:'rgba(34,197,94,.15)',text:'#86efac'},'עמידה':{bg:'rgba(251,146,60,.15)',text:'#fdba74'}};
 const ECAT_COLORS={
   'כנס':          {bg:'rgba(168,85,247,.2)',  text:'#d8b4fe', bar:'#a855f7'},
   'כרטיסים':      {bg:'rgba(236,72,153,.2)',  text:'#f9a8d4', bar:'#ec4899'},
@@ -356,25 +386,107 @@ let filters={from:'',to:'',type:'',mgr:'',status:''};
 let editContacts=[], editStatus='הצעת מחיר', editEcat='כנס';
 let chartInstances={};
 
-// ── SUPABASE ──
-function connectSupabase(){
+// ── PERMISSIONS ──
+const ROLES={
+  master:  {label:'Admin',     color:'#f59e0b', canAdd:true, canEdit:true, canDelete:true, canShare:true, canDashboard:true, canProfile:true},
+  admin:   {label:'מנהל',      color:'#4f7ef8', canAdd:true, canEdit:true, canDelete:true, canShare:true, canDashboard:true, canProfile:false},
+  manager: {label:'מנהל אירוע',color:'#22c55e', canAdd:true, canEdit:true, canDelete:false,canShare:true, canDashboard:true, canProfile:false},
+  viewer:  {label:'צופה',      color:'#8b92a8', canAdd:false,canEdit:false,canDelete:false,canShare:false,canDashboard:false,canProfile:false}
+};
+
+function getRole(){
+  try{const u=JSON.parse(localStorage.getItem('current_user')||'{}');return u.role||'viewer';}
+  catch{return 'viewer';}
+}
+function can(perm){return !!(ROLES[getRole()]||ROLES.viewer)[perm];}
+function getRoleInfo(){return ROLES[getRole()]||ROLES.viewer;}
+
+function applyPermissions(){
+  const r=getRole();
+  const ri=getRoleInfo();
+  document.getElementById('role-badge').textContent=ri.label;
+  document.getElementById('role-badge').style.background=ri.color+'33';
+  document.getElementById('role-badge').style.color=ri.color;
+  const addBtn=document.getElementById('topbar-add-btn');
+  if(addBtn)addBtn.style.display=can('canAdd')?'':'none';
+  const profileBtn=document.getElementById('topbar-profile-btn');
+  if(profileBtn)profileBtn.style.display=can('canProfile')?'':'none';
+  const dashBtn=document.getElementById('topbar-dash-btn');
+  if(dashBtn)dashBtn.style.display=can('canDashboard')?'':'none';
+}
+function showSetupPanel(){
+  document.getElementById('login-panel').style.display='none';
+  document.getElementById('setup-panel').style.display='';
+}
+function showLoginPanel(){
+  document.getElementById('setup-panel').style.display='none';
+  document.getElementById('login-panel').style.display='';
+}
+
+function saveSupabaseConfig(){
   const url=document.getElementById('sb-url').value.trim();
   const key=document.getElementById('sb-key').value.trim();
-  if(!url||!key){showToast('נא למלא URL ו-Key');return;}
+  if(!url||!key){showLoginErr('נא למלא URL ו-Key');return;}
+  localStorage.setItem('sb_url',url);
+  localStorage.setItem('sb_key',key);
+  showToast('הגדרות נשמרו');
+  showLoginPanel();
+}
+
+function showLoginErr(msg){
+  const el=document.getElementById('login-err');
+  el.textContent=msg;el.style.display='';
+}
+
+function togglePass(){
+  const inp=document.getElementById('login-pass');
+  const btn=document.getElementById('eye-btn');
+  if(inp.type==='password'){inp.type='text';btn.style.opacity='1';}
+  else{inp.type='password';btn.style.opacity='0.5';}
+}
+
+async function doLogin(){
+  const mail=document.getElementById('login-mail').value.trim().toLowerCase();
+  const pass=document.getElementById('login-pass').value;
+  if(!mail||!pass){showLoginErr('נא למלא מייל וסיסמה');return;}
+  const url=localStorage.getItem('sb_url');
+  const key=localStorage.getItem('sb_key');
+  if(!url||!key){showLoginErr('נא להגדיר חיבור Supabase קודם');showSetupPanel();return;}
   try{
     sbClient=supabase.createClient(url,key);
-    localStorage.setItem('sb_url',url);
-    localStorage.setItem('sb_key',key);
+    const isMaster=mail==='bergerman1@gmail.com'&&pass==='22061984';
+    const users=JSON.parse(localStorage.getItem('venue_users')||'[]');
+    const found=isMaster?{name:'Admin',mail,role:'master'}:users.find(u=>u.mail&&u.mail.toLowerCase()===mail&&u.pass===pass);
+    if(!found){showLoginErr('מייל או סיסמה שגויים');return;}
+    localStorage.setItem('current_user',JSON.stringify(found));
     document.getElementById('setup-screen').style.display='none';
     document.getElementById('app').style.display='block';
     loadBrandSettings();
+    applyPermissions();
     loadEvents();
     setupRealtime();
-  }catch(e){showToast('שגיאה: '+e.message);}
+  }catch(err){showLoginErr('שגיאה: '+err.message);}
+}
+
+function doLogout(){
+  localStorage.removeItem('current_user');
+  document.getElementById('app').style.display='none';
+  document.getElementById('setup-screen').style.display='flex';
+  document.getElementById('login-mail').value='';
+  document.getElementById('login-pass').value='';
+  document.getElementById('login-err').style.display='none';
+}
+
+function connectSupabase(){
+  const url=localStorage.getItem('sb_url');
+  const key=localStorage.getItem('sb_key');
+  if(!url||!key)return false;
+  sbClient=supabase.createClient(url,key);
+  return true;
 }
 
 function resetConnection(){
-  localStorage.removeItem('sb_url');localStorage.removeItem('sb_key');
+  localStorage.removeItem('sb_url');localStorage.removeItem('sb_key');localStorage.removeItem('current_user');
   location.reload();
 }
 
@@ -463,8 +575,13 @@ function loadBrandSettings(){
   document.getElementById('brand-name-display').textContent=n;
   applyAccent(c);
   const box=document.getElementById('logo-box');
-  if(l){box.innerHTML=`<img src="${l}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`;}
-  else{box.textContent=n[0]||'א';}
+  if(l){
+    box.classList.remove('text-only');
+    box.innerHTML=`<img src="${l}" style="height:100%;width:auto;max-width:180px;object-fit:contain;display:block">`;
+  }else{
+    box.classList.add('text-only');
+    box.textContent=n[0]||'א';
+  }
 }
 
 function applyAccent(c){
@@ -495,7 +612,8 @@ function uploadLogo(){
   const r=new FileReader();
   r.onload=e=>{
     const box=document.getElementById('logo-box');
-    box.innerHTML=`<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:10px">`;
+    box.classList.remove('text-only');
+    box.innerHTML=`<img src="${e.target.result}" style="height:100%;width:auto;max-width:180px;object-fit:contain;display:block">`;
     localStorage.setItem('brand_logo',e.target.result);
   };
   r.readAsDataURL(f);
@@ -636,7 +754,8 @@ function renderCharts(f){
 function renderList(){
   const f=getFiltered();
   renderStats(f);
-  renderCharts(f);
+  if(can('canDashboard'))renderCharts(f);
+  else document.getElementById('chart-row').innerHTML='';
   const g=document.getElementById('events-grid');
   const em=document.getElementById('empty-state');
   if(!f.length){g.innerHTML='';em.style.display='';return;}
@@ -660,8 +779,8 @@ function renderList(){
         <div class="card-footer">
           <div class="manager-chip"><div class="avatar">${ini(e.manager)}</div><div class="manager-name">${e.manager||'–'}</div></div>
           <div class="card-actions" onclick="event.stopPropagation()">
-            <button class="btn-icon" onclick="openModal('edit','${e.id}')">✏</button>
-            <button class="btn-icon" onclick="confirmDel('${e.id}')" style="color:#ef4444">✕</button>
+            ${can('canEdit')?`<button class="btn-icon" onclick="openModal('edit','${e.id}')">✏</button>`:''}
+            ${can('canDelete')?`<button class="btn-icon" onclick="confirmDel('${e.id}')" style="color:#ef4444">✕</button>`:''}
           </div>
         </div>
       </div>
@@ -781,7 +900,8 @@ function openVenueProfile(){
         </div>
         <div id="vtab-users" style="display:none">
           <div class="sec-box">
-            <div id="users-list">${users.map((u,i)=>`<div class="user-row"><div class="ff"><input value="${u.name}" oninput="venueUsers[${i}].name=this.value" placeholder="שם"></div><div class="ff"><input value="${u.mail}" oninput="venueUsers[${i}].mail=this.value" placeholder="מייל"></div><button class="btn-rm" onclick="removeUser(${i})">✕</button></div>`).join('')}</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:10px">משתמשים אלו יוכלו להתחבר למערכת עם המייל והסיסמה שהגדרת.</div>
+            <div id="users-list">${users.map((u,i)=>`<div class="user-row" style="grid-template-columns:1fr 1fr 1fr auto"><div class="ff"><input value="${u.name||''}" oninput="venueUsers[${i}].name=this.value" placeholder="שם"></div><div class="ff"><input value="${u.mail||''}" oninput="venueUsers[${i}].mail=this.value" placeholder="מייל" dir="ltr"></div><div class="ff"><input type="password" value="${u.pass||''}" oninput="venueUsers[${i}].pass=this.value" placeholder="סיסמה" dir="ltr"></div><button class="btn-rm" onclick="removeUser(${i})">✕</button></div>`).join('')}</div>
             <button class="btn-add-row" onclick="addUser()">+ הוסף משתמש</button>
           </div>
         </div>
@@ -809,7 +929,11 @@ function showVenueTab(tab,btn){
   document.querySelectorAll('.venue-tab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
 }
-function addUser(){venueUsers.push({name:'',mail:''});const l=document.getElementById('users-list');if(l)l.innerHTML=venueUsers.map((u,i)=>`<div class="user-row"><div class="ff"><input value="${u.name}" oninput="venueUsers[${i}].name=this.value" placeholder="שם"></div><div class="ff"><input value="${u.mail}" oninput="venueUsers[${i}].mail=this.value" placeholder="מייל"></div><button class="btn-rm" onclick="removeUser(${i})">✕</button></div>`).join('');}
+function addUser(){
+  venueUsers.push({name:'',mail:'',pass:''});
+  const l=document.getElementById('users-list');
+  if(l)l.innerHTML=venueUsers.map((u,i)=>`<div class="user-row" style="grid-template-columns:1fr 1fr 1fr auto"><div class="ff"><input value="${u.name||''}" oninput="venueUsers[${i}].name=this.value" placeholder="שם"></div><div class="ff"><input value="${u.mail||''}" oninput="venueUsers[${i}].mail=this.value" placeholder="מייל" dir="ltr"></div><div class="ff"><input type="password" value="${u.pass||''}" oninput="venueUsers[${i}].pass=this.value" placeholder="סיסמה" dir="ltr"></div><button class="btn-rm" onclick="removeUser(${i})">✕</button></div>`).join('');
+}
 function removeUser(i){venueUsers.splice(i,1);addUser();venueUsers.pop();}
 function openWaze(addr){window.open('https://waze.com/ul?q='+encodeURIComponent(addr),'_blank');}
 function saveVenueProfile(){
@@ -888,12 +1012,12 @@ function openDetail(id){
         <div class="sec-box">${contacts}</div>
       </div>
       <div class="modal-footer">
-        <button class="btn-danger" onclick="confirmDel('${e.id}');closeMC()">מחק</button>
+        ${can('canDelete')?`<button class="btn-danger" onclick="confirmDel('${e.id}');closeMC()">מחק</button>`:''}
         <button class="btn-secondary" onclick="closeMC()">סגור</button>
-        <button class="btn-pdf" onclick="sharePdf('${e.id}')">PDF ↓</button>
-        <button class="btn-wa" onclick="shareWA('${e.id}')">WhatsApp ↑</button>
-        <button class="btn-secondary" onclick="closeMC();duplicateEvent('${e.id}')">שכפל</button>
-        <button class="btn-primary" onclick="closeMC();openModal('edit','${e.id}')">✏ ערוך</button>
+        ${can('canShare')?`<button class="btn-pdf" onclick="sharePdf('${e.id}')">PDF ↓</button>`:''}
+        ${can('canShare')?`<button class="btn-wa" onclick="shareWA('${e.id}')">WhatsApp ↑</button>`:''}
+        ${can('canEdit')?`<button class="btn-secondary" onclick="closeMC();duplicateEvent('${e.id}')">שכפל</button>`:''}
+        ${can('canEdit')?`<button class="btn-primary" onclick="closeMC();openModal('edit','${e.id}')">✏ ערוך</button>`:''}
       </div>
     </div></div>`;
 }
@@ -936,7 +1060,7 @@ function removeContact(i){editContacts.splice(i,1);renderContactsEdit();}
 
 function openModal(mode,id){
   const e=mode==='edit'?events.find(x=>x.id===id)
-    :{id:0,name:'',date:'',hall:'',type:'תאטרון',ecat:'כנס',audience:'',startTime:'',endTime:'',
+    :{id:0,name:'',date:'',hall:'',type:'סידור אולם',ecat:'כנס',audience:'',startTime:'',endTime:'',
       balanceTime:'',setupTime:'',teardownTime:'',securityTime:'',
       notes:'',status:'הצעת מחיר',bar:'',bartenders:'',catering:'',portions:'',buffet:'',
       manager:'',managerPhone:'',managerMail:'',opTeam:'',techTeam:'',
@@ -968,7 +1092,7 @@ function openModal(mode,id){
           <div class="ff full"><label>שם האירוע</label><input id="fn" value="${e.name}" placeholder="שם האירוע"></div>
           <div class="ff"><label>תאריך</label><input type="date" id="fd" value="${e.date||''}"></div>
           <div class="ff"><label>אולם</label><input id="fh" value="${e.hall||''}" placeholder="שם האולם"></div>
-          <div class="ff"><label>סוג אירוע</label><select id="ftp">${to}</select></div>
+          <div class="ff"><label>סידור אולם</label><select id="ftp">${to}</select></div>
           <div class="ff"><label>קהל צפוי</label><input type="number" id="fau" value="${e.audience||''}"></div>
           <div class="ff full"><label>הערות</label><textarea id="fno">${e.notes||''}</textarea></div>
         </div></div>
@@ -996,7 +1120,6 @@ function openModal(mode,id){
         <div class="sec-box"><div class="fg">
           <div class="ff"><label>מנהל אירוע</label><input id="fmn" value="${e.manager||''}"></div>
           <div class="ff"><label>טלפון</label><input id="fmp" value="${e.managerPhone||''}"></div>
-          <div class="ff full"><label>מייל</label><input id="fmm" value="${e.managerMail||''}"></div>
           <div class="ff full"><label>צוות תפעול</label><textarea id="fot">${e.opTeam||''}</textarea></div>
           <div class="ff full"><label>צוות טכני</label><textarea id="ftt">${e.techTeam||''}</textarea></div>
         </div></div>
@@ -1031,7 +1154,7 @@ async function saveEv(id){
     setupTime:g('fsu'),teardownTime:g('fte'),securityTime:g('fse'),
     bar:g('fbr'),bartenders:parseInt(g('fbn'))||0,
     catering:g('fca'),portions:parseInt(g('fpo'))||0,buffet:g('fbu'),
-    manager:g('fmn'),managerPhone:g('fmp'),managerMail:g('fmm'),
+    manager:g('fmn'),managerPhone:g('fmp'),managerMail:'',
     opTeam:g('fot'),techTeam:g('ftt'),
     sound:g('fso'),lighting:g('fli'),screens:g('fsc'),extraTech:g('fex'),
     contacts:JSON.parse(JSON.stringify(editContacts))
@@ -1057,33 +1180,181 @@ function sharePdf(id){
   const e=events.find(x=>x.id===id);if(!e)return;
   const win=window.open('','_blank');
   const vp=JSON.parse(localStorage.getItem('venue_profile')||'{}');
+  const logoSrc=localStorage.getItem('brand_logo')||'';
+  const accentColor=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#4f7ef8';
+  const venueName=vp.brandName||vp.name||'ניהול אירועים';
+  const logoHtml=logoSrc
+    ?`<img src="${logoSrc}" style="height:60px;max-width:200px;object-fit:contain;display:block">`
+    :`<div style="width:60px;height:60px;background:rgba(255,255,255,0.3);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:#fff">${venueName[0]||'א'}</div>`;
+  const s=SC[e.status]||{bar:'#666'};
   win.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>${e.name}</title>
-  <style>body{font-family:Arial,sans-serif;padding:32px;color:#111;direction:rtl}h1{font-size:22px;margin-bottom:4px}h2{font-size:14px;color:#666;border-bottom:1px solid #ddd;padding-bottom:4px;margin:16px 0 8px}table{width:100%;font-size:13px}td{padding:5px 0}td:first-child{color:#666;width:140px}.footer{margin-top:32px;font-size:11px;color:#aaa}@media print{@page{margin:20mm}}</style></head>
-  <body><h1>${e.name}</h1><p style="color:#888;font-size:12px">${vp.name||''}</p>
-  <h2>פרטי אירוע</h2><table><tr><td>תאריך</td><td>${fd(e.date)}</td></tr><tr><td>שעות</td><td>${e.startTime||'–'} – ${e.endTime||'–'}</td></tr><tr><td>אולם</td><td>${e.hall||'–'}</td></tr><tr><td>סטטוס</td><td>${e.status}</td></tr><tr><td>קהל</td><td>${e.audience}</td></tr></table>
-  <h2>שעות</h2><table><tr><td>באלנס</td><td>${e.balanceTime||'–'}</td></tr><tr><td>הקמה</td><td>${e.setupTime||'–'}</td></tr><tr><td>פירוק</td><td>${e.teardownTime||'–'}</td></tr><tr><td>מאבטח</td><td>${e.securityTime||'–'}</td></tr></table>
-  <h2>שירותים</h2><table><tr><td>בר</td><td>${e.bar||'–'}</td></tr><tr><td>קייטרינג</td><td>${e.catering||'–'} · ${e.portions} מנות</td></tr></table>
-  <h2>כוח אדם</h2><table><tr><td>מנהל אירוע</td><td>${e.manager||'–'} | ${e.managerPhone||'–'}</td></tr><tr><td>צוות תפעול</td><td>${e.opTeam||'–'}</td></tr><tr><td>צוות טכני</td><td>${e.techTeam||'–'}</td></tr></table>
-  <h2>דרישות טכניות</h2><table><tr><td>סאונד</td><td>${e.sound||'–'}</td></tr><tr><td>תאורה</td><td>${e.lighting||'–'}</td></tr><tr><td>מסכים</td><td>${e.screens||'–'}</td></tr></table>
-  <div class="footer">הופק מתוך מערכת ניהול אירועים · ${new Date().toLocaleDateString('he-IL')}</div>
-  <script>window.onload=()=>window.print()<\/script></body></html>`);
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Heebo',Arial,sans-serif;background:#fff;color:#111;direction:rtl;font-size:13px}
+    .header{background:${accentColor};padding:24px 32px;display:flex;align-items:center;justify-content:space-between;color:#fff}
+    .header-right{display:flex;align-items:center;gap:16px}
+    .venue-name{font-size:20px;font-weight:900;color:#fff}
+    .venue-sub{font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px}
+    .event-title-bar{background:${s.bar};padding:14px 32px;display:flex;align-items:center;justify-content:space-between}
+    .event-title{font-size:22px;font-weight:900;color:#fff}
+    .status-badge{background:rgba(255,255,255,0.25);color:#fff;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700}
+    .body{padding:24px 32px}
+    .section{margin-bottom:20px}
+    .sec-head{font-size:11px;font-weight:800;color:${accentColor};text-transform:uppercase;letter-spacing:.08em;border-bottom:2px solid ${accentColor}22;padding-bottom:5px;margin-bottom:10px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px}
+    .row{display:flex;gap:8px;padding:4px 0;border-bottom:1px solid #f0f0f0}
+    .row:last-child{border-bottom:none}
+    .lbl{color:#888;min-width:130px;font-size:12px;font-weight:500}
+    .val{font-weight:600;color:#111}
+    .footer{margin-top:24px;padding:16px 32px;background:#f8f8f6;border-top:1px solid #eee;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#aaa}
+    @media print{@page{margin:0}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  </style></head>
+  <body>
+  <div class="header">
+    <div class="header-right">
+      ${logoHtml}
+      <div><div class="venue-name">${venueName}</div><div class="venue-sub">${vp.address||''}</div></div>
+    </div>
+    <div style="text-align:left;color:rgba(255,255,255,0.8);font-size:12px">
+      ${vp.phone?'📞 '+vp.phone+'<br>':''} 
+      ${vp.mail?'✉ '+vp.mail+'<br>':''}
+      ${vp.web?'🌐 '+vp.web:''}
+    </div>
+  </div>
+  <div class="event-title-bar">
+    <div class="event-title">${e.name}</div>
+    <div class="status-badge">${e.status}</div>
+  </div>
+  <div class="body">
+    <div class="section">
+      <div class="sec-head">פרטי אירוע</div>
+      <div class="grid">
+        <div class="row"><span class="lbl">תאריך</span><span class="val">${fd(e.date)}</span></div>
+        <div class="row"><span class="lbl">אולם</span><span class="val">${e.hall||'–'}</span></div>
+        <div class="row"><span class="lbl">סוג אירוע</span><span class="val">${e.type||'–'}</span></div>
+        <div class="row"><span class="lbl">קטגוריה</span><span class="val">${e.ecat||'–'}</span></div>
+        <div class="row"><span class="lbl">קהל צפוי</span><span class="val">${e.audience} אנשים</span></div>
+        ${e.notes?`<div class="row" style="grid-column:1/-1"><span class="lbl">הערות</span><span class="val">${e.notes}</span></div>`:''}
+      </div>
+    </div>
+    <div class="section">
+      <div class="sec-head">שעות</div>
+      <div class="grid">
+        <div class="row"><span class="lbl">התחלה</span><span class="val">${e.startTime||'–'}</span></div>
+        <div class="row"><span class="lbl">סיום</span><span class="val">${e.endTime||'–'}</span></div>
+        <div class="row"><span class="lbl">באלנס</span><span class="val">${e.balanceTime||'–'}</span></div>
+        <div class="row"><span class="lbl">הקמה</span><span class="val">${e.setupTime||'–'}</span></div>
+        <div class="row"><span class="lbl">פירוק</span><span class="val">${e.teardownTime||'–'}</span></div>
+        <div class="row"><span class="lbl">מאבטח</span><span class="val">${e.securityTime||'–'}</span></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="sec-head">שירותים</div>
+      <div class="grid">
+        <div class="row"><span class="lbl">סוג בר</span><span class="val">${e.bar||'–'}</span></div>
+        <div class="row"><span class="lbl">ברמנים</span><span class="val">${e.bartenders}</span></div>
+        <div class="row"><span class="lbl">קייטרינג</span><span class="val">${e.catering||'–'}</span></div>
+        <div class="row"><span class="lbl">כמות מנות</span><span class="val">${e.portions}</span></div>
+        ${e.buffet?`<div class="row" style="grid-column:1/-1"><span class="lbl">מזנון</span><span class="val">${e.buffet}</span></div>`:''}
+      </div>
+    </div>
+    <div class="section">
+      <div class="sec-head">כוח אדם</div>
+      <div class="row"><span class="lbl">מנהל אירוע</span><span class="val">${e.manager||'–'} &nbsp;|&nbsp; ${e.managerPhone||'–'} &nbsp;|&nbsp; ${e.managerMail||'–'}</span></div>
+      ${e.opTeam?`<div class="row"><span class="lbl">צוות תפעול</span><span class="val" style="white-space:pre-line">${e.opTeam}</span></div>`:''}
+      ${e.techTeam?`<div class="row"><span class="lbl">צוות טכני</span><span class="val" style="white-space:pre-line">${e.techTeam}</span></div>`:''}
+      ${e.contacts&&e.contacts.length?`<div class="row"><span class="lbl">אנשי קשר</span><span class="val">${e.contacts.map(c=>c.name+' ('+c.role+') '+c.phone).join(' | ')}</span></div>`:''}
+    </div>
+    <div class="section">
+      <div class="sec-head">דרישות טכניות</div>
+      <div class="grid">
+        ${e.sound?`<div class="row"><span class="lbl">סאונד</span><span class="val">${e.sound}</span></div>`:''}
+        ${e.lighting?`<div class="row"><span class="lbl">תאורה</span><span class="val">${e.lighting}</span></div>`:''}
+        ${e.screens?`<div class="row"><span class="lbl">מסכים</span><span class="val">${e.screens}</span></div>`:''}
+        ${e.extraTech?`<div class="row" style="grid-column:1/-1"><span class="lbl">דרישות נוספות</span><span class="val">${e.extraTech}</span></div>`:''}
+      </div>
+    </div>
+  </div>
+  <div class="footer">
+    <span>${venueName}${vp.address?' · '+vp.address:''}</span>
+    <span>הופק: ${new Date().toLocaleDateString('he-IL')}</span>
+  </div>
+  <script>window.onload=()=>{window.print();}<\/script>
+  </body></html>`);
   win.document.close();
 }
 
 function shareWA(id){
   const e=events.find(x=>x.id===id);if(!e)return;
   const vp=JSON.parse(localStorage.getItem('venue_profile')||'{}');
-  const txt=`*${e.name}*\n📅 ${fd(e.date)} | ⏰ ${e.startTime||'–'}–${e.endTime||'–'}\n🏛 ${e.hall||'–'}${vp.address?'\n📍 '+vp.address:''}\n👥 קהל: ${e.audience}\n📋 סטטוס: ${e.status}\n👤 מנהל אירוע: ${e.manager||'–'} ${e.managerPhone||''}\n\n🔧 הקמה: ${e.setupTime||'–'} | פירוק: ${e.teardownTime||'–'}\n🔒 מאבטח: ${e.securityTime||'–'}`;
+  const venueName=vp.brandName||vp.name||'';
+  const contacts=e.contacts&&e.contacts.length?'\n👥 *אנשי קשר:*\n'+e.contacts.map(c=>`  • ${c.name} (${c.role}) – ${c.phone}`).join('\n'):'';
+  const opTeam=e.opTeam?'\n\n🧑‍💼 *צוות תפעול:*\n'+e.opTeam.split('\n').map(l=>'  • '+l).join('\n'):'';
+  const techTeam=e.techTeam?'\n🔧 *צוות טכני:*\n'+e.techTeam.split('\n').map(l=>'  • '+l).join('\n'):'';
+  const txt=`🎉 *${e.name}*${venueName?' | '+venueName:''}
+
+📅 *תאריך:* ${fd(e.date)}
+🏛 *אולם:* ${e.hall||'–'}${vp.address?'\n📍 *כתובת:* '+vp.address:''}
+🎭 *סוג:* ${e.type||'–'} | ${e.ecat||'–'}
+👥 *קהל צפוי:* ${e.audience} אנשים
+📋 *סטטוס:* ${e.status}
+
+⏰ *שעות:*
+  • התחלה: ${e.startTime||'–'}
+  • סיום: ${e.endTime||'–'}
+  • באלנס: ${e.balanceTime||'–'}
+  • הקמה: ${e.setupTime||'–'}
+  • פירוק: ${e.teardownTime||'–'}
+  • מאבטח: ${e.securityTime||'–'}
+
+🍽 *שירותים:*
+  • בר: ${e.bar||'–'} (${e.bartenders} ברמנים)
+  • קייטרינג: ${e.catering||'–'} · ${e.portions} מנות
+  ${e.buffet?'• מזנון: '+e.buffet:''}
+
+👤 *מנהל אירוע:* ${e.manager||'–'}
+  📞 ${e.managerPhone||'–'}
+  ✉ ${e.managerMail||'–'}${contacts}${opTeam}${techTeam}
+${e.sound||e.lighting||e.screens?`
+🎛 *דרישות טכניות:*
+  ${e.sound?'• סאונד: '+e.sound:''}
+  ${e.lighting?'• תאורה: '+e.lighting:''}
+  ${e.screens?'• מסכים: '+e.screens:''}`:''} 
+${e.notes?'\n📝 *הערות:* '+e.notes:''}
+${vp.phone||vp.mail?'\n📞 *יצירת קשר עם האולם:*\n'+(vp.phone?'  טלפון: '+vp.phone+'\n':'')+(vp.mail?'  מייל: '+vp.mail:''):''}`;
   window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
 }
 
+function showDashboard(){
+  switchView('list');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
 // ── INIT ──
-const savedUrl=localStorage.getItem('sb_url');
-const savedKey=localStorage.getItem('sb_key');
-if(savedUrl&&savedKey){
-  document.getElementById('sb-url').value=savedUrl;
-  document.getElementById('sb-key').value=savedKey;
-  connectSupabase();
+const SB_URL='https://xhebkgbjeoyfelzfgqxi.supabase.co';
+const SB_KEY='sb_publishable_DykyEqeZS8fZp0qM_WixCQ_fOWvlvMr';
+localStorage.setItem('sb_url',SB_URL);
+localStorage.setItem('sb_key',SB_KEY);
+
+const currentUser=localStorage.getItem('current_user');
+if(currentUser){
+  if(connectSupabase()){
+    document.getElementById('setup-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    loadBrandSettings();
+    applyPermissions();
+    loadEvents();
+    setupRealtime();
+  }
+} else {
+  const vp=JSON.parse(localStorage.getItem('venue_profile')||'{}');
+  if(vp.brandName)document.getElementById('login-venue-name').textContent=vp.brandName;
+  if(localStorage.getItem('brand_logo')){
+    const logo=document.getElementById('login-logo');
+    logo.innerHTML=`<img src="${localStorage.getItem('brand_logo')}" style="width:100%;height:100%;object-fit:contain;border-radius:12px">`;
+    logo.style.background='transparent';logo.style.border='none';
+  }
 }
 </script>
 </body>
